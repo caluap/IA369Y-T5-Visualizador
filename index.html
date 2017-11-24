@@ -97,6 +97,16 @@
                   .exit()
                     .attr("fill", "blue");
 
+      circle1.transition()
+        .duration(1500)
+        .attr("cx", 150)
+        .transition()
+        .delay(500)
+        .attr("cy",200)
+        .on("end", function () {
+          d3.select(this).attr("fill","red")
+        });
+
 
 
     </script>
