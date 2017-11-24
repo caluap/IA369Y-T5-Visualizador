@@ -4,16 +4,87 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="/js/papaparse.js"></script>
+    <script src="/js/p5.js"></script>
     <title>oi</title>
+    <style>
+      body {padding: 0; margin: 0;}
+      canvas {vertical-align: top;}
+    </style>
   </head>
   <body>
-    <script>var data = Papa.parse("tweets_classificados.csv", {
-      download: true,
-      header: true,
-      complete: function(results) {
-      	console.log(results);
-      }
+
+
+    <!-- <script src="sketch.js"></script> -->
+    <script>
+      var d = [];
+      Papa.parse("tweets_classificados.csv", {
+        download: true,
+        header: true,
+        complete: function(results) {
+          d = results;
+          monta_array();
+        }
       });
+
+      function conv_valencia(val) {
+        return (val - 4)/3; // de -1 a 1
+      }
+
+      function conv_intensidade(inten) {
+        return (inten - 1)/6; // de 0 a 1
+      }
+
+      function monta_array(user = null) {
+
+        if (!user) {
+          user = d.data[0].id;
+        }
+
+        var i = 0, terminou = false;
+        var s_i_1 = s_i = null;
+        while (!terminou) {
+          if (i == d.data.length || d.data[i].id != user) {
+            terminou = true;
+          } else {
+
+            historico.push({});
+
+            if (s_i === null) { // primeiro loop 
+              historico[i]["delta_t"] = 0;
+              s_i = Date.parse(d.data[i].data);
+            } else {
+
+              s_i_1 = s_i;
+              s_i = Date.parse(d.data[i].data);
+              delta_t = s_i_1 - s_i; // qtos segundos entre eles?
+              historico[i]["delta_t"] = delta_t;
+            }
+
+            historico[i]["valencia"] = conv_valencia(d.data[i].val);
+            historico[i]["intensidade"] = conv_intensidade(d.data[i].int);
+            
+            i++;
+          }
+        }
+  
+        console.log(historico);
+        console.log(historico.length);
+      }
+
+
+      var historico = [];
+
+
+
+      ///// -------
+      function setup() {
+        createCanvas(displayWidth, displayHeight);  
+      }
+
+      function draw() {
+      }
+      ///// -------
+
     </script>
   </body>
 </html>
