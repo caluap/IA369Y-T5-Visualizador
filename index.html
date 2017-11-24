@@ -81,8 +81,16 @@
         var height = 8000;
 
         var time_scale = d3.scaleLinear()
-                  .domain([0, d3.max(historico.map(function(d){return d.delta_t;}))])
-                  .range([50, 2000]);
+                          .domain([0, d3.max(historico.map(function(d){return d.delta_t;}))])
+                          .range([10, 100]);
+
+        var intensity_scale = d3.scaleLinear()
+                                .domain([0, 1])
+                                .range([1, 15]);
+                                
+        var valence_color_scale = d3.scaleLinear()
+                                    .domain([-1,0,1])
+                                    .range(["red","rgb(128,128,128)","green"]);
 
         var canvas = d3.select("body")
                       .append("svg")
@@ -94,12 +102,15 @@
                     .enter()
                       .append("circle")
                       .attr("cx", 50)
-                      .attr("cy", function(d) {
-                          console.log(Math.floor(time_scale(d.delta_t)));
-                          return Math.floor(time_scale(d.delta_t));
+                      .attr("cy", function(d, i) {
+                          return time_scale(d.delta_t) * i + 100;
                         })
-                      .attr("r","5")
-                      .attr("fill","red");
+                      .attr("r",function(d) {
+                          return intensity_scale(d.intensidade);
+                        })
+                      .attr("fill",function(d) {
+                        return valence_color_scale(d.valencia);
+                      });
 
         
       }
