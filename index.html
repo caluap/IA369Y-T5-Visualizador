@@ -5,13 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="/js/papaparse.js"></script>
     <script src="/js/d3.js"></script>
+    <script src="/js/moment.js"></script>
     <link href="https://fonts.googleapis.com/css?family=ABeeZee" rel="stylesheet">
     
     <title>oi</title>
-    <style>
-      body {padding: 0; margin: 0;}
-      canvas {vertical-align: top;}
-    </style>
   </head>
   <body>
 
@@ -31,7 +28,7 @@
     </style>
 
     <script>
-      // var re = [];
+
       var dados = [], users = [], max_delta_t = [];
       Papa.parse("tweets_classificados.csv", {
         download: true,
@@ -57,10 +54,24 @@
             }
           }
 
-          desenha(dados, users, max_delta_t);
+          var min_max = acha_min_max_geral(results.data);
+          console.log(min_max);
+
+          desenha(dados, users, max_delta_t, min_max);
 
         }
       });
+
+      function acha_min_max_geral(results) {
+        segundos = [];
+        for (i = 0; i < results.length; i++) {
+          segundos.push(Date.parse(results[i].data));
+        }
+        return [
+          d3.min(segundos),
+          d3.max(segundos)
+        ];
+      }
 
       function conv_valencia(val) {
         return (val - 4)/3; // de -1 a 1
@@ -108,17 +119,41 @@
       // d3.sum; d3.mean; d3.median; d3.shuffle
 
 
+
+      function distancia_ate_fds(time) {
+
+          var deltas = {};
+
+          var momento_atual = moment(time);
+
+          if ( (momento_atual.day() == 0 && momento_atual.hour() <= 16)  // fds acaba às 16h do domingo?
+            || (momento_atual.day() == 5 && momento_atual.hour() >= 21)  // fds começa às 21h da sexta?
+            || (momento_atual.day() == 6)) { // sabadão é fds
+
+            deltas["eh_fds"] = true;
+            // calcular qtos segundos até o fim
+            var proximo_domingo = moment(moment(time).endOf("week").add(16,'h')); // domingo é o primeiro dia da semana, então preciso medir sábado + 16 horas do domingo...
+            deltas["delta_segundos"] = moment.duration(proximo_domingo.diff(momento_atual));
+
+          } else { // ok, não estamos em um, então medir distância até o início do próximo
+
+            deltas["eh_fds"] = false;
+            // calcular segundos até sexta às 21h: acho o fim do sábado, tiro 1 dia, tiro 1 dia menos 21h da noite
+            var inicio_fds = moment(moment(time).endOf("week").subtract(24+(24-21),'h'));
+            deltas["delta_segundos"] = moment.duration(inicio_fds.diff(momento_atual));
+          }
+
+          return deltas;
+        }
+
+
       
-      function desenha(dados, users, max) {
+      function desenha(dados, users, max, min_max) {
         
         var delta_x_user = 100;
         var pad = 40;
 
         function desenha_uma_linha(canvas, dados, user, max, i) {
-          var time_scale = d3.scaleLinear()
-                            .domain([0, max])
-                            .range([10, 100]);
-
 
           var text = d3
                     .select("body")
@@ -150,19 +185,26 @@
 
         }
 
-
-        var intensity_scale = d3.scaleLinear()
-                                .domain([0, 1])
-                                .range([0, 22]);
-                                
-        var valence_color_scale = d3.scaleLinear()
-                                  .domain([-1,0,1])
-                                  .range(["rgba(255,0,0,0.8)","rgba(128,128,128,0.1)","rgba(0,255,0,0.8)"]);
+        function px_por_s(min_t, max_t, min_range, max_range) {
+          return (max_range - min_range) / (max_t - min_t);
+        }
 
 
         var max_geral = d3.max(max);
         var width = dados.length * delta_x_user + 2 * pad;
         var height = 8000;
+
+        var intensity_scale = d3.scaleLinear()
+                                .domain([0, 1])
+                                .range([0, 30]);
+                                
+        var valence_color_scale = d3.scaleLinear()
+                                  .domain([-1,0,1])
+                                  .range(["rgba(255,0,0,0.8)","rgba(128,128,128,0.1)","rgba(0,255,0,0.8)"]);
+
+        var time_scale = d3.scaleLinear()
+                          .domain([0, 24 * 60 * 60])
+                          .range([0, 48]);
 
         var canvas = d3.select("body")
                       .append("svg")
@@ -170,6 +212,10 @@
                       .attr("height", height)
                       .append("g");
                         // .attr("transform","translate(20,20)");
+        px_por_s(
+          time_scale.domain()[0], time_scale.domain()[1],
+          time_scale.range()[0], time_scale.range()[1]
+        );
 
 
         for (var i = 0; i < dados.length; i++) {
