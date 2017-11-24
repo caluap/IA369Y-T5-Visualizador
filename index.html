@@ -14,13 +14,28 @@
   <body>
 
     <script>
-      var d = [];
+      // var re = [];
+      var dados = {};
       Papa.parse("tweets_classificados.csv", {
         download: true,
         header: true,
         complete: function(results) {
-          d = results;
-          monta_array();
+          
+          // daqui: https://stackoverflow.com/questions/17780508/selecting-distinct-values-from-a-json
+          
+          var lookup = {};
+          var items = results.data;
+          
+          for (var item, i = 0; item = items[i++];) {
+            var user = item.id;
+          
+            if (!(user in lookup)) {
+              lookup[user] = 1;
+              dados[user] = monta_array_user(user, results.data);
+              // users.push(user);
+            }
+          }
+
         }
       });
 
@@ -32,88 +47,83 @@
         return (inten - 1)/6; // de 0 a 1
       }
 
-      var historico = [];
+      function monta_array_user(user, dados) {
 
-      function monta_array(user = null) {
+        var array_user = [];
+        
+        var s0, s1 = null;
 
-        if (!user) {
-          user = d.data[0].id;
-        }
+        for (var i = 0; i < dados.length; i++) {
+          if (dados[i].id == user) {
 
-        var i = 0, terminou = false;
-        var s_i_1 = s_i = null;
-        while (!terminou) {
-          if (i == d.data.length || d.data[i].id != user) {
-            terminou = true;
-          } else {
+            array_user.push({});
+            i2 = array_user.length - 1;
 
-            historico.push({});
-
-            if (s_i === null) { // primeiro loop 
-              historico[i]["delta_t"] = 0;
-              s_i = Date.parse(d.data[i].data);
+            // calcula distância de tempo
+            if (s1 == null) { // primeira vez
+              array_user[i2]["delta_t"] = 0;
+              s1 = Date.parse(dados[i].data);
             } else {
-
-              s_i_1 = s_i;
-              s_i = Date.parse(d.data[i].data);
-              delta_t = s_i_1 - s_i; // qtos segundos entre eles?
-              historico[i]["delta_t"] = delta_t;
+              s0 = s1;
+              s1 = Date.parse(dados[i].data);
+              var delta_t = s1 - s0; // qtos segundos entre eles?
+              array_user[i2]["delta_t"] = delta_t;
             }
 
-            historico[i]["valencia"] = conv_valencia(d.data[i].val);
-            historico[i]["intensidade"] = conv_intensidade(d.data[i].int);
-            
-            i++;
+            // outras informações
+
+            array_user[i2]["valencia"] = conv_valencia(dados[i].val);
+            array_user[i2]["intensidade"] = conv_intensidade(dados[i].int);
+
           }
         }
 
-        desenha();
-
+        return array_user;
       } 
 
       // ref: d3.min; d3.max; d3.extent [min e max]
       // d3.sum; d3.mean; d3.median; d3.shuffle
 
 
-      function desenha() {
+      // function desenha() {
 
-        var width = 500;
-        var height = 8000;
+      //   var width = 500;
+      //   var height = 8000;
 
-        var time_scale = d3.scaleLinear()
-                          .domain([0, d3.max(historico.map(function(d){return d.delta_t;}))])
-                          .range([10, 100]);
+      //   var time_scale = d3.scaleLinear()
+      //                     .domain([0, d3.max(historico.map(function(d){return d.delta_t;}))])
+      //                     .range([10, 100]);
 
-        var intensity_scale = d3.scaleLinear()
-                                .domain([0, 1])
-                                .range([1, 15]);
+      //   var intensity_scale = d3.scaleLinear()
+      //                           .domain([0, 1])
+      //                           .range([1, 15]);
                                 
-        var valence_color_scale = d3.scaleLinear()
-                                    .domain([-1,0,1])
-                                    .range(["red","rgb(128,128,128)","green"]);
+      //   var valence_color_scale = d3.scaleLinear()
+      //                               .domain([-1,0,1])
+      //                               .range(["red","rgb(128,128,128)","green"]);
 
-        var canvas = d3.select("body")
-                      .append("svg")
-                      .attr("width", width)
-                      .attr("height", height);
+      //   var canvas = d3.select("body")
+      //                 .append("svg")
+      //                 .attr("width", width)
+      //                 .attr("height", height);
 
-        var circs = canvas.selectAll("circs")
-                    .data(historico)
-                    .enter()
-                      .append("circle")
-                      .attr("cx", 50)
-                      .attr("cy", function(d, i) {
-                          return time_scale(d.delta_t) * i + 100;
-                        })
-                      .attr("r",function(d) {
-                          return intensity_scale(d.intensidade);
-                        })
-                      .attr("fill",function(d) {
-                        return valence_color_scale(d.valencia);
-                      });
+      //   var circs = canvas.selectAll("circs")
+      //               .data(historico)
+      //               .enter()
+      //                 .append("circle")
+      //                 .attr("cx", 50)
+      //                 .attr("cy", function(d, i) {
+      //                     return time_scale(d.delta_t) * i + 100;
+      //                   })
+      //                 .attr("r",function(d) {
+      //                     return intensity_scale(d.intensidade);
+      //                   })
+      //                 .attr("fill",function(d) {
+      //                   return valence_color_scale(d.valencia);
+      //                 });
 
         
-      }
+      // }
 
 
 
