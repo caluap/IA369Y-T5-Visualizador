@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="/js/papaparse.js"></script>
     <script src="/js/d3.js"></script>
+    <link href="https://fonts.googleapis.com/css?family=ABeeZee" rel="stylesheet">
+    
     <title>oi</title>
     <style>
       body {padding: 0; margin: 0;}
@@ -16,6 +18,15 @@
     <style>
       body {
         padding: 10px;
+      }
+
+      .label-user {
+        position: absolute;
+        top: 50px;
+        font-size: 10px;
+        font-family: 'ABeeZee', sans-serif;
+        transform: rotateZ(-45deg);
+        transform-origin: top left;
       }
     </style>
 
@@ -103,18 +114,30 @@
         var delta_x_user = 100;
         var pad = 40;
 
-        function desenha_uma_linha(canvas, dados, max, i) {
+        function desenha_uma_linha(canvas, dados, user, max, i) {
           var time_scale = d3.scaleLinear()
                             .domain([0, max])
                             .range([10, 100]);
 
+
+          var text = d3
+                    .select("body")
+                    .append("p")
+                    .text(user)
+                    .attr("class","label-user")
+                    .style("left", (i * 100 + pad) + "px");
+
+
+          var pad_text = 50;
+
+
           var circs = canvas.selectAll("circs")
               .data(dados)
               .enter()
-                .append("circle")
+              .append("circle")
                 .attr("cx", delta_x_user * i + pad)
                 .attr("cy", function(d, i) {
-                    return time_scale(d.delta_t) * i + pad;
+                    return time_scale(d.delta_t) * i + pad + pad_text;
                   })
                 .attr("r",function(d) {
                     return intensity_scale(d.intensidade);
@@ -150,7 +173,7 @@
 
 
         for (var i = 0; i < dados.length; i++) {
-          desenha_uma_linha(canvas, dados[i], max_geral, i)
+          desenha_uma_linha(canvas, dados[i], users[i], max_geral, i)
         }
 
       }
