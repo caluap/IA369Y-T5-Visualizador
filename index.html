@@ -25,6 +25,22 @@
         transform: rotateZ(-45deg);
         transform-origin: top left;
       }
+
+      div.tooltip {	
+        position: absolute;
+        max-width: 240px;		
+        min-width: 120px;
+        padding: 2px;				
+        font-family: 'ABeeZee', sans-serif;		
+        font-size: 8px;
+        background: rgba(255,255,255,0.7);	
+        padding: 3px;
+        border-radius: 2px;
+        pointer-events: none;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.2);	
+      }
+
+
     </style>
 
     <script>
@@ -111,6 +127,8 @@
 
             // outras informações
 
+            array_user[i2]["tweet"] = dados[i].txt;
+            array_user[i2]["timestamp"] = moment(dados[i].data);
             array_user[i2]["valencia"] = conv_valencia(dados[i].val);
             array_user[i2]["intensidade"] = conv_intensidade(dados[i].int);
 
@@ -119,6 +137,11 @@
 
         return array_user;
       } 
+
+
+      var div = d3.select("body").append("div")	
+                    .attr("class", "tooltip")				
+                    .style("opacity", 0);
 
       // ref: d3.min; d3.max; d3.extent [min e max]
       // d3.sum; d3.mean; d3.median; d3.shuffle
@@ -182,7 +205,6 @@
           eh_fds = !eh_fds;
         }
 
-        console.log(array_periodos);
         return array_periodos;
 
       }
@@ -212,7 +234,7 @@
                         })
                         .attr("fill", function(d) {
                           if (d[2]) { //eh_fds
-                            return "rgba(0,0,200,0.1)";
+                            return "rgba(0,0,50,0.1)";
                           } 
                           return "rgba(0,0,0,0.05)"
                         });
@@ -234,15 +256,27 @@
               .append("circle")
                 .attr("cx", delta_x_user * i + pad)
                 .attr("cy", function(d, i) {
-                    var y = time_scale(d.delta_abs) + pad + pad_text;
-                    // console.log(user + " > " + y);
-                    return y;
-                  })
+                  var y = time_scale(d.delta_abs) + pad + pad_text;
+                  // console.log(user + " > " + y);
+                  return y;
+                })
                 .attr("r",function(d) {
-                    return intensity_scale(d.intensidade);
-                  })
+                  return intensity_scale(d.intensidade);
+                })
                 .attr("fill",function(d) {
                   return valence_color_scale(d.valencia);
+                })
+                // http://bl.ocks.org/d3noob/a22c42db65eb00d4e369
+                .on("mouseover", function(d) {
+                  d3.select(".tooltip")
+                    	.html(d.tweet + "<br><br>" + d.timestamp.format('llll'))	
+                      .style("left", (d3.event.pageX + 20) + "px")
+                      .style("top", (d3.event.pageY - 28) + "px")
+                      .style("opacity",1);	
+                })					
+                .on("mouseout", function(d) {		
+                  d3.select(".tooltip")	
+                    .style("opacity", 0);
                 });
 
           return circs;
@@ -259,7 +293,7 @@
         
 
         var ms_dia = 24 * 60 * 60 * 1000;
-        var y_dia = 300;
+        var y_dia = 200;
         var max_geral = d3.max(max);
 
         var intensity_scale = d3.scaleLinear()
