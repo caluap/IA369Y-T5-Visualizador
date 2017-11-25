@@ -163,18 +163,18 @@
 
           var fim_deste_fds = moment(moment(time).endOf("isoWeek"));
           fim_deste_fds = fim_deste_fds.subtract(24-fim_fds,'h').add(1,'s');
+          var inicio_deste_fds = fim_deste_fds.subtract(48,'h');
 
-          distancia = momento_atual.diff(fim_deste_fds);
+          distancia = momento_atual.diff(inicio_deste_fds);
 
-        } else { // ok, não estamos em um, então medir distância até o início do próximo
+        } else {
 
           deltas["eh_fds"] = false;
           
-          var fim_deste_fds = moment(moment(time).endOf("isoWeek"));
-          fim_deste_fds = fim_deste_fds.subtract(24-fim_fds,'h').add(1,'s');
-          inicio_deste_fds = fim_deste_fds.subtract(48,'h');
+          var fim_do_ultimo_fds = moment(moment(time).startOf("isoWeek"));
+          fim_do_ultimo_fds = fim_do_ultimo_fds.subtract(24-fim_fds,'h').add(1,'s');
 
-          distancia = momento_atual.diff(inicio_deste_fds);
+          distancia = momento_atual.diff(fim_do_ultimo_fds);
         }
 
         deltas["delta_msegundos"] = Math.abs(distancia);
@@ -190,9 +190,6 @@
         
         var array_periodos = [];
         var delta = distancia_ate_fds(init_time);
-        // console.log(">>> aqui <<<");
-        // console.log(init_time);
-        // console.log(delta);
 
         array_periodos.push([delta["delta_msegundos"], 0, delta["eh_fds"]]);
         duracao_total -= delta["delta_msegundos"];
@@ -215,6 +212,11 @@
           duracao_total -= duracao;
           y_anterior += duracao;
           eh_fds = !eh_fds;
+        }
+
+        console.log(duracao_semana + "  " + duracao_fds);
+        for (var i = 0; i < array_periodos.length; i++ ) {
+          console.log(array_periodos[i]);
         }
 
         return array_periodos;
