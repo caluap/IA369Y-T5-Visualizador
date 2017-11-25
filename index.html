@@ -55,7 +55,7 @@
           }
 
           var min_max = acha_min_max_geral(results.data);
-          console.log(min_max);
+          // console.log(min_max);
 
           desenha(dados, users, max_delta_t, min_max);
 
@@ -63,13 +63,13 @@
       });
 
       function acha_min_max_geral(results) {
-        segundos = [];
+        milisegundos = [];
         for (i = 0; i < results.length; i++) {
-          segundos.push(Date.parse(results[i].data));
+          milisegundos.push(Date.parse(results[i].data)); // está em milisegundos. quero em segundos
         }
         return [
-          d3.min(segundos),
-          d3.max(segundos)
+          d3.min(milisegundos),
+          d3.max(milisegundos)
         ];
       }
 
@@ -86,6 +86,7 @@
         var array_user = [];
 
         var s0, s1 = null;
+        var t0;
 
         for (var i = 0; i < dados.length; i++) {
           if (dados[i].id == user) {
@@ -96,12 +97,17 @@
             // calcula distância de tempo
             if (s1 == null) { // primeira vez
               array_user[i2]["delta_t"] = 0;
+              array_user[i2]["delta_abs"] = 0;
               s1 = Date.parse(dados[i].data);
+              t0 = s1;
             } else {
               s0 = s1;
               s1 = Date.parse(dados[i].data);
               var delta_t = s0 - s1; // qtos segundos entre eles?
               array_user[i2]["delta_t"] = delta_t;
+
+              array_user[i2]["delta_abs"] = t0 - s1; // qtos segundos entre o tweet mais recente e este?
+
             }
 
             // outras informações
@@ -121,30 +127,41 @@
 
 
       function distancia_ate_fds(time) {
+        var deltas = {};
+        var momento_atual = moment(time);
 
-          var deltas = {};
+        if ( (momento_atual.day() == 0 && momento_atual.hour() <= 16)  // fds acaba às 16h do domingo?
+          || (momento_atual.day() == 5 && momento_atual.hour() >= 21)  // fds começa às 21h da sexta?
+          || (momento_atual.day() == 6)) { // sabadão é fds
 
-          var momento_atual = moment(time);
+          deltas["eh_fds"] = true;
+          // calcular qtos segundos até o fim
+          var proximo_domingo = moment(moment(time).endOf("week").add(16,'h')); // domingo é o primeiro dia da semana, então preciso medir sábado + 16 horas do domingo...
+          deltas["delta_segundos"] = moment.duration(proximo_domingo.diff(momento_atual));
 
-          if ( (momento_atual.day() == 0 && momento_atual.hour() <= 16)  // fds acaba às 16h do domingo?
-            || (momento_atual.day() == 5 && momento_atual.hour() >= 21)  // fds começa às 21h da sexta?
-            || (momento_atual.day() == 6)) { // sabadão é fds
+        } else { // ok, não estamos em um, então medir distância até o início do próximo
 
-            deltas["eh_fds"] = true;
-            // calcular qtos segundos até o fim
-            var proximo_domingo = moment(moment(time).endOf("week").add(16,'h')); // domingo é o primeiro dia da semana, então preciso medir sábado + 16 horas do domingo...
-            deltas["delta_segundos"] = moment.duration(proximo_domingo.diff(momento_atual));
-
-          } else { // ok, não estamos em um, então medir distância até o início do próximo
-
-            deltas["eh_fds"] = false;
-            // calcular segundos até sexta às 21h: acho o fim do sábado, tiro 1 dia, tiro 1 dia menos 21h da noite
-            var inicio_fds = moment(moment(time).endOf("week").subtract(24+(24-21),'h'));
-            deltas["delta_segundos"] = moment.duration(inicio_fds.diff(momento_atual));
-          }
-
-          return deltas;
+          deltas["eh_fds"] = false;
+          // calcular segundos até sexta às 21h: acho o fim do sábado, tiro 1 dia, tiro 1 dia menos 21h da noite
+          var inicio_fds = moment(moment(time).endOf("week").subtract(24+(24-21),'h'));
+          deltas["delta_segundos"] = moment.duration(inicio_fds.diff(momento_atual));
         }
+
+        return deltas;
+      }
+
+      function monta_array_periodos(init_time, duracao_total) {
+        var array_periodos = [];
+
+        var delta = distancia_ate_fds(init_time);
+        if (delta["eh_fds"]) {
+          array_periodos.push(0); // vou supor que a semana começa no “não fds”, ou seja, se o t0 for fds, zero a primeira posição do array
+        }
+
+        array_periodos.push(delta["delta_segundos"]);
+        duracao_total = duracao_total - delta["delta_segundos"];
+
+      }
 
 
       
@@ -152,6 +169,7 @@
         
         var delta_x_user = 100;
         var pad = 40;
+        var pad_text = 50;
 
         function desenha_uma_linha(canvas, dados, user, max, i) {
 
@@ -163,16 +181,15 @@
                     .style("left", (i * 100 + pad) + "px");
 
 
-          var pad_text = 50;
-
-
           var circs = canvas.selectAll("circs")
               .data(dados)
               .enter()
               .append("circle")
                 .attr("cx", delta_x_user * i + pad)
                 .attr("cy", function(d, i) {
-                    return time_scale(d.delta_t) * i + pad + pad_text;
+                    var y = time_scale(d.delta_abs) + pad + pad_text;
+                    // console.log(user + " > " + y);
+                    return y;
                   })
                 .attr("r",function(d) {
                     return intensity_scale(d.intensidade);
@@ -181,18 +198,19 @@
                   return valence_color_scale(d.valencia);
                 });
 
+          console.log(dados);
+
           return circs;
 
         }
 
-        function px_por_s(min_t, max_t, min_range, max_range) {
-          return (max_range - min_range) / (max_t - min_t);
+        function y_total(min_t, max_t, y_dia, ms_dia) {
+          return (max_t - min_t) * y_dia / ms_dia;
         }
 
-
+        var ms_dia = 24 * 60 * 60 * 1000;
+        var y_dia = 300;
         var max_geral = d3.max(max);
-        var width = dados.length * delta_x_user + 2 * pad;
-        var height = 8000;
 
         var intensity_scale = d3.scaleLinear()
                                 .domain([0, 1])
@@ -203,20 +221,22 @@
                                   .range(["rgba(255,0,0,0.8)","rgba(128,128,128,0.1)","rgba(0,255,0,0.8)"]);
 
         var time_scale = d3.scaleLinear()
-                          .domain([0, 24 * 60 * 60])
-                          .range([0, 48]);
+                          .domain([0, ms_dia])
+                          .range([0, y_dia]);
+
+        var width = dados.length * delta_x_user + 2 * pad;
+        var height = y_total(min_max[0], min_max[1], y_dia, ms_dia) + 2 * pad + pad_text;
 
         var canvas = d3.select("body")
                       .append("svg")
                       .attr("width", width)
                       .attr("height", height)
                       .append("g");
-                        // .attr("transform","translate(20,20)");
-        px_por_s(
-          time_scale.domain()[0], time_scale.domain()[1],
-          time_scale.range()[0], time_scale.range()[1]
-        );
+        
+        // console.log(y_segundo);
+        // console.log(height);
 
+        
 
         for (var i = 0; i < dados.length; i++) {
           desenha_uma_linha(canvas, dados[i], users[i], max_geral, i)
