@@ -55,7 +55,6 @@
           }
 
           var min_max = acha_min_max_geral(results.data);
-          // console.log(min_max);
 
           desenha(dados, users, max_delta_t, min_max);
 
@@ -124,54 +123,102 @@
       // ref: d3.min; d3.max; d3.extent [min e max]
       // d3.sum; d3.mean; d3.median; d3.shuffle
 
+      var inicio_fds = 19,
+      fim_fds = 19;
 
 
       function distancia_ate_fds(time) {
         var deltas = {};
         var momento_atual = moment(time);
 
-        if ( (momento_atual.day() == 0 && momento_atual.hour() <= 16)  // fds acaba às 16h do domingo?
-          || (momento_atual.day() == 5 && momento_atual.hour() >= 21)  // fds começa às 21h da sexta?
+        if ( (momento_atual.day() == 0 && momento_atual.hour() <= fim_fds)  // fds acaba às 16h do domingo?
+          || (momento_atual.day() == 5 && momento_atual.hour() >= inicio_fds)  // fds começa às 21h da sexta?
           || (momento_atual.day() == 6)) { // sabadão é fds
 
           deltas["eh_fds"] = true;
           // calcular qtos segundos até o fim
-          var proximo_domingo = moment(moment(time).endOf("week").add(16,'h')); // domingo é o primeiro dia da semana, então preciso medir sábado + 16 horas do domingo...
-          deltas["delta_segundos"] = moment.duration(proximo_domingo.diff(momento_atual));
+          var proximo_domingo = moment(moment(time).endOf("week").add(fim_fds,'h')); // domingo é o primeiro dia da semana, então preciso medir sábado + 16 horas do domingo...
+          deltas["delta_msegundos"] = moment.duration(proximo_domingo.diff(momento_atual)).asMilliseconds();
 
         } else { // ok, não estamos em um, então medir distância até o início do próximo
 
           deltas["eh_fds"] = false;
           // calcular segundos até sexta às 21h: acho o fim do sábado, tiro 1 dia, tiro 1 dia menos 21h da noite
-          var inicio_fds = moment(moment(time).endOf("week").subtract(24+(24-21),'h'));
-          deltas["delta_segundos"] = moment.duration(inicio_fds.diff(momento_atual));
+          var inicio_fds = moment(moment(time).endOf("week").subtract(24+(24-inicio_fds),'h'));
+          deltas["delta_msegundos"] = moment.duration(inicio_fds.diff(momento_atual)).asMilliseconds();
         }
 
         return deltas;
       }
 
       function monta_array_periodos(init_time, duracao_total) {
+        //             inicio_fds/sexta            +   sábado     + 0-fim_fds/domingo  * ms
+        var duracao_fds = ((24-inicio_fds) * 60 * 60 + 24 * 60 * 60 + fim_fds * 60 * 60) * 1000;
+        var duracao_semana = (7 * 24 * 60 * 60) * 1000 - duracao_fds; // o resto
+        
         var array_periodos = [];
-
         var delta = distancia_ate_fds(init_time);
-        if (delta["eh_fds"]) {
-          array_periodos.push(0); // vou supor que a semana começa no “não fds”, ou seja, se o t0 for fds, zero a primeira posição do array
+
+        array_periodos.push([delta["delta_msegundos"], 0, delta["eh_fds"]]);
+        duracao_total -= delta["delta_msegundos"];
+        
+        var y_anterior = delta["delta_msegundos"];
+        var eh_fds = !delta["eh_fds"];
+
+        while (duracao_total > 0) {
+
+          var duracao;
+
+          if (eh_fds) {
+            duracao = duracao_fds;
+          } else {
+            duracao = duracao_semana;
+          }
+
+          array_periodos.push([duracao, y_anterior, eh_fds]);
+
+          duracao_total -= duracao;
+          y_anterior += duracao;
+          eh_fds = !eh_fds;
         }
 
-        array_periodos.push(delta["delta_segundos"]);
-        duracao_total = duracao_total - delta["delta_segundos"];
+        console.log(array_periodos);
+        return array_periodos;
 
       }
 
 
       
       function desenha(dados, users, max, min_max) {
-        
-        var delta_x_user = 100;
-        var pad = 40;
-        var pad_text = 50;
 
-        function desenha_uma_linha(canvas, dados, user, max, i) {
+        function plota_fds(canvas, dados, n_users, y_ms) {
+
+          var rects = canvas.selectAll("rects")
+                      .data(dados)
+                      .enter()
+                      .append("rect")
+                        .attr("width", n_users * delta_x_user)
+                        .attr("y", function(d) {
+                          y = (d[1]*y_ms) + pad + pad_text;
+                          return y;
+                        })
+                        .attr("height", function(d, i) {
+                          var n_height = d[0] * y_ms;
+                          // console.log(i + " " + n_height);
+                          if (d[2] || true) {
+                            return n_height;
+                          }
+                          // return 2; // dias da semana = só uma linha
+                        })
+                        .attr("fill", function(d) {
+                          if (d[2]) { //eh_fds
+                            return "rgba(0,0,200,0.1)";
+                          } 
+                          return "rgba(0,0,0,0.05)"
+                        });
+        }
+
+        function plota_um_usuario(canvas, dados, user, max, i) {
 
           var text = d3
                     .select("body")
@@ -198,8 +245,6 @@
                   return valence_color_scale(d.valencia);
                 });
 
-          console.log(dados);
-
           return circs;
 
         }
@@ -207,6 +252,11 @@
         function y_total(min_t, max_t, y_dia, ms_dia) {
           return (max_t - min_t) * y_dia / ms_dia;
         }
+ 
+        var delta_x_user = 100;
+        var pad = 40;
+        var pad_text = 50;
+        
 
         var ms_dia = 24 * 60 * 60 * 1000;
         var y_dia = 300;
@@ -232,14 +282,13 @@
                       .attr("width", width)
                       .attr("height", height)
                       .append("g");
-        
-        // console.log(y_segundo);
-        // console.log(height);
 
+        var array_periodos = monta_array_periodos(min_max[0], min_max[1]-min_max[0]);
         
+        plota_fds(canvas, array_periodos, users.length, y_dia/ms_dia);
 
         for (var i = 0; i < dados.length; i++) {
-          desenha_uma_linha(canvas, dados[i], users[i], max_geral, i)
+          plota_um_usuario(canvas, dados[i], users[i], max_geral, i)
         }
 
       }
