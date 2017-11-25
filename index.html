@@ -214,10 +214,10 @@
           eh_fds = !eh_fds;
         }
 
-        console.log(duracao_semana + "  " + duracao_fds);
-        for (var i = 0; i < array_periodos.length; i++ ) {
-          console.log(array_periodos[i]);
-        }
+        // console.log(duracao_semana + "  " + duracao_fds);
+        // for (var i = 0; i < array_periodos.length; i++ ) {
+        //   console.log(array_periodos[i]);
+        // }
 
         return array_periodos;
 
@@ -344,7 +344,7 @@
 
         var array_periodos = monta_array_periodos(min_max[1], min_max[1]-min_max[0]);
 
-        console.log(min_max);
+        // console.log(min_max);
         // plota_tics()
         
         plota_fds(canvas, array_periodos, users.length, y_dia/ms_dia);
