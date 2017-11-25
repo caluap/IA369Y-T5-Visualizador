@@ -128,7 +128,7 @@
             // outras informações
 
             array_user[i2]["tweet"] = dados[i].txt;
-            array_user[i2]["timestamp"] = moment(dados[i].data);
+            array_user[i2]["timestamp"] = dados[i].data;
             array_user[i2]["valencia"] = conv_valencia(dados[i].val);
             array_user[i2]["intensidade"] = conv_intensidade(dados[i].int);
 
@@ -148,7 +148,6 @@
 
       var inicio_fds = 19,
       fim_fds = 19;
-
 
       function distancia_ate_fds(time) {
         var deltas = {};
@@ -241,7 +240,7 @@
         }
 
 
-        function plota_um_usuario(canvas, dados, user, max, i) {
+        function plota_um_usuario(canvas, dados, user, max, delta_y, i) {
 
           var text = d3
                     .select("body")
@@ -257,7 +256,7 @@
               .append("circle")
                 .attr("cx", delta_x_user * i + pad)
                 .attr("cy", function(d, i) {
-                  var y = time_scale(d.delta_abs) + pad + pad_text;
+                  var y = time_scale(d.delta_abs) + pad + pad_text + delta_y;
                   // console.log(user + " > " + y);
                   return y;
                 })
@@ -274,7 +273,7 @@
                   d3.select(this)
                     .attr("stroke-width","1");
                   d3.select(".tooltip")
-                    	.html(d.tweet + "<br><br>" + d.timestamp.format('llll'))	
+                    	.html(d.tweet + "<br><br>" + moment(d.timestamp).format('llll'))	
                       .style("left", (d3.event.pageX + 20) + "px")
                       .style("top", (d3.event.pageY - 28) + "px")
                       .style("opacity",1);	
@@ -329,7 +328,11 @@
         plota_fds(canvas, array_periodos, users.length, y_dia/ms_dia);
 
         for (var i = 0; i < dados.length; i++) {
-          plota_um_usuario(canvas, dados[i], users[i], max_geral, i)
+          var delta_t = min_max[1] - Date.parse(dados[i][0].timestamp);
+          var delta_y = y_dia/ms_dia * delta_t;
+
+          // console.log(delta_y);
+          plota_um_usuario(canvas, dados[i], users[i], max_geral, delta_y, i)
         }
 
       }
