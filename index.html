@@ -153,22 +153,32 @@
         var deltas = {};
         var momento_atual = moment(time);
 
+        var distancia;
+
         if ( (momento_atual.day() == 0 && momento_atual.hour() <= fim_fds)  // fds acaba às 16h do domingo?
           || (momento_atual.day() == 5 && momento_atual.hour() >= inicio_fds)  // fds começa às 21h da sexta?
-          || (momento_atual.day() == 6)) { // sabadão é fds
+          || (momento_atual.day() == 6)) { // sabadão é sempre fds
 
           deltas["eh_fds"] = true;
-          // calcular qtos segundos até o fim
-          var proximo_domingo = moment(moment(time).endOf("week").add(fim_fds,'h')); // domingo é o primeiro dia da semana, então preciso medir sábado + 16 horas do domingo...
-          deltas["delta_msegundos"] = moment.duration(proximo_domingo.diff(momento_atual)).asMilliseconds();
+
+          var fim_deste_fds = moment(moment(time).endOf("isoWeek"));
+          fim_deste_fds = fim_deste_fds.subtract(24-fim_fds,'h').add(1,'s');
+
+          distancia = momento_atual.diff(fim_deste_fds);
 
         } else { // ok, não estamos em um, então medir distância até o início do próximo
 
           deltas["eh_fds"] = false;
-          // calcular segundos até sexta às 21h: acho o fim do sábado, tiro 1 dia, tiro 1 dia menos 21h da noite
-          var inicio_fds = moment(moment(time).endOf("week").subtract(24+(24-inicio_fds),'h'));
-          deltas["delta_msegundos"] = moment.duration(inicio_fds.diff(momento_atual)).asMilliseconds();
+          
+          var fim_deste_fds = moment(moment(time).endOf("isoWeek"));
+          fim_deste_fds = fim_deste_fds.subtract(24-fim_fds,'h').add(1,'s');
+          inicio_deste_fds = fim_deste_fds.subtract(48,'h');
+
+          distancia = momento_atual.diff(inicio_deste_fds);
         }
+
+        deltas["delta_msegundos"] = Math.abs(distancia);
+        // console.log(distancia);
 
         return deltas;
       }
@@ -180,6 +190,9 @@
         
         var array_periodos = [];
         var delta = distancia_ate_fds(init_time);
+        // console.log(">>> aqui <<<");
+        // console.log(init_time);
+        // console.log(delta);
 
         array_periodos.push([delta["delta_msegundos"], 0, delta["eh_fds"]]);
         duracao_total -= delta["delta_msegundos"];
@@ -237,6 +250,10 @@
                           } 
                           return "rgba(0,0,0,0.05)"
                         });
+        }
+
+        function plota_ticks(delta_y, n_ticks) {
+
         }
 
 
@@ -323,7 +340,10 @@
                       .attr("height", height)
                       .append("g");
 
-        var array_periodos = monta_array_periodos(min_max[0], min_max[1]-min_max[0]);
+        var array_periodos = monta_array_periodos(min_max[1], min_max[1]-min_max[0]);
+
+        console.log(min_max);
+        // plota_tics()
         
         plota_fds(canvas, array_periodos, users.length, y_dia/ms_dia);
 
