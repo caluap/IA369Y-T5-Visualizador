@@ -32,7 +32,7 @@
         min-width: 120px;
         padding: 2px;				
         font-family: 'ABeeZee', sans-serif;		
-        font-size: 8px;
+        font-size: 11px;
         background: rgba(255,255,255,0.7);	
         padding: 3px;
         border-radius: 2px;
@@ -285,6 +285,9 @@
                 .attr("fill",function(d) {
                   return valence_color_scale(d.valencia);
                 })
+                .attr("opacity",function (d) {
+                  return d.intensidade;
+                })
                 .attr("stroke","black")
                 .attr("stroke-width","0")
                 // http://bl.ocks.org/d3noob/a22c42db65eb00d4e369
@@ -292,7 +295,7 @@
                   d3.select(this)
                     .attr("stroke-width","1");
                   d3.select(".tooltip")
-                    	.html(d.tweet + "<br><br>" + moment(d.timestamp).format('llll'))	
+                    	.html(d.tweet + "<br>" + moment(d.timestamp).format('llll') + "<br>V:" + d.valencia.toFixed(2) + " / I:" + d.intensidade.toFixed(2))	
                       .style("left", (d3.event.pageX + 20) + "px")
                       .style("top", (d3.event.pageY - 28) + "px")
                       .style("opacity",1);	
@@ -321,13 +324,17 @@
         var y_dia = 200;
         var max_geral = d3.max(max);
 
+        var valence_radius_scale = d3.scaleLinear()
+                                    .domain([-1,0,1])
+                                    .range([30,0,30]);
+
         var intensity_scale = d3.scaleLinear()
                                 .domain([0, 1])
                                 .range([0, 30]);
                                 
         var valence_color_scale = d3.scaleLinear()
                                   .domain([-1,0,1])
-                                  .range(["rgba(255,0,0,0.8)","rgba(128,128,128,0.1)","rgba(0,255,0,0.8)"]);
+                                  .range(["rgba(255,0,0,1)","rgba(128,128,128,0.5)","rgba(0,255,0,1)"]);
 
         var time_scale = d3.scaleLinear()
                           .domain([0, ms_dia])
