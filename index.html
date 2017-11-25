@@ -140,11 +140,8 @@
 
 
       var div = d3.select("body").append("div")	
-                    .attr("class", "tooltip")				
+                    .attr("class", "tooltip")
                     .style("opacity", 0);
-
-      // ref: d3.min; d3.max; d3.extent [min e max]
-      // d3.sum; d3.mean; d3.median; d3.shuffle
 
       var inicio_fds = 19,
       fim_fds = 19;
@@ -155,8 +152,8 @@
 
         var distancia;
 
-        if ( (momento_atual.day() == 0 && momento_atual.hour() <= fim_fds)  // fds acaba às 16h do domingo?
-          || (momento_atual.day() == 5 && momento_atual.hour() >= inicio_fds)  // fds começa às 21h da sexta?
+        if ( (momento_atual.day() == 0 && momento_atual.hour() <= fim_fds)  // fds acaba quando passa o faustão?
+          || (momento_atual.day() == 5 && momento_atual.hour() >= inicio_fds)  // fds começa se sai do trabalho?
           || (momento_atual.day() == 6)) { // sabadão é sempre fds
 
           deltas["eh_fds"] = true;
@@ -184,9 +181,10 @@
       }
 
       function monta_array_periodos(init_time, duracao_total) {
+
         //             inicio_fds/sexta            +   sábado     + 0-fim_fds/domingo  * ms
         var duracao_fds = ((24-inicio_fds) * 60 * 60 + 24 * 60 * 60 + fim_fds * 60 * 60) * 1000;
-        var duracao_semana = (7 * 24 * 60 * 60) * 1000 - duracao_fds; // o resto
+        var duracao_semana = (7 * 24 * 60 * 60) * 1000 - duracao_fds; // o tempo que restou
         
         var array_periodos = [];
         var delta = distancia_ate_fds(init_time);
@@ -310,7 +308,6 @@
                 .attr("cx", delta_x_user * i + pad)
                 .attr("cy", function(d, i) {
                   var y = time_scale(d.delta_abs) + pad + pad_text + delta_y;
-                  // console.log(user + " > " + y);
                   return y;
                 })
                 .attr("r",function(d) {
@@ -323,17 +320,19 @@
                   return d.intensidade;
                 })
                 .attr("stroke","black")
-                .attr("stroke-width","0")
+                .attr("stroke-width","0") // só exibe quando o tooltip está acionado
+
                 // http://bl.ocks.org/d3noob/a22c42db65eb00d4e369
                 .on("mouseover", function(d) {
                   d3.select(this)
                     .attr("stroke-width","1");
                   d3.select(".tooltip")
-                    	.html(d.tweet + "<br>" + moment(d.timestamp).format('llll') + "<br>V:" + d.valencia.toFixed(2) + " / I:" + d.intensidade.toFixed(2))	
+                    	.html(d.tweet + "<br>" + moment(Date.parse(d.timestamp)).format('llll') + "<br>V:" + d.valencia.toFixed(2) + " / I:" + d.intensidade.toFixed(2))	
                       .style("left", (d3.event.pageX + 20) + "px")
                       .style("top", (d3.event.pageY - 28) + "px")
                       .style("opacity",1);	
-                })					
+                })
+
                 .on("mouseout", function(d) {	
                   d3.select(this)
                     .attr("stroke-width","0");	
@@ -348,15 +347,21 @@
         function y_total(min_t, max_t, y_dia, ms_dia) {
           return (max_t - min_t) * y_dia / ms_dia;
         }
- 
-        var delta_x_user = 100;
-        var pad = 40;
-        var pad_text = 50;
+
         
+ 
+        var delta_x_user = 100; // tamanho da coluna
+        var pad = 40; // margem top e bottom no canvas
+        var pad_text = 50; // margem top adicional para os labels de usuário
+
+
+        // escala Y
 
         var ms_dia = 24 * 60 * 60 * 1000;
-        var y_dia = 200;
+        var y_dia = 400;
         var max_geral = d3.max(max);
+
+        // escalas de conversão
 
         var valence_radius_scale = d3.scaleLinear()
                                     .domain([-1,0,1])
@@ -374,6 +379,9 @@
                           .domain([0, ms_dia])
                           .range([0, y_dia]);
 
+
+        // canvas
+
         var width = dados.length * delta_x_user + 2 * pad;
         var height = y_total(min_max[0], min_max[1], y_dia, ms_dia) + 2 * pad + pad_text;
 
@@ -383,17 +391,23 @@
                       .attr("height", height)
                       .append("g");
 
-        var array_periodos = monta_array_periodos(min_max[1], min_max[1]-min_max[0]);
+
+        // ticks
 
         var m0 = moment(min_max[1]);
         var ms_primeiro_tick = m0.diff(moment(m0).hour(0).minute(0).second(0));
-
         var n_dias = Math.floor((min_max[1] - min_max[0] - ms_primeiro_tick) / ms_dia);
         var ticks_por_dia = 4;
 
+
+
         plota_ticks(canvas, ms_primeiro_tick * y_dia/ms_dia, n_dias * ticks_por_dia, y_dia / ticks_por_dia, users.length);
-        
+
+        // semana vs fim-de-semana
+
+        var array_periodos = monta_array_periodos(min_max[1], min_max[1]-min_max[0]);
         plota_fds(canvas, array_periodos, users.length, y_dia/ms_dia);
+
 
         for (var i = 0; i < dados.length; i++) {
           // quão distante está o primeiro tweet desse usuário de nosso momento “0”?
