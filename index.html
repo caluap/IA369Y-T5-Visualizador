@@ -240,6 +240,7 @@
                         });
         }
 
+
         function plota_um_usuario(canvas, dados, user, max, i) {
 
           var text = d3
@@ -266,15 +267,21 @@
                 .attr("fill",function(d) {
                   return valence_color_scale(d.valencia);
                 })
+                .attr("stroke","black")
+                .attr("stroke-width","0")
                 // http://bl.ocks.org/d3noob/a22c42db65eb00d4e369
                 .on("mouseover", function(d) {
+                  d3.select(this)
+                    .attr("stroke-width","1");
                   d3.select(".tooltip")
                     	.html(d.tweet + "<br><br>" + d.timestamp.format('llll'))	
                       .style("left", (d3.event.pageX + 20) + "px")
                       .style("top", (d3.event.pageY - 28) + "px")
                       .style("opacity",1);	
                 })					
-                .on("mouseout", function(d) {		
+                .on("mouseout", function(d) {	
+                  d3.select(this)
+                    .attr("stroke-width","0");	
                   d3.select(".tooltip")	
                     .style("opacity", 0);
                 });
