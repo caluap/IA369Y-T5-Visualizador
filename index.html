@@ -45,6 +45,8 @@
 
     <script>
 
+      var catrambias;
+
       var dados = [], users = [], max_delta_t = [];
       Papa.parse("tweets_classificados.csv", {
         download: true,
@@ -94,6 +96,77 @@
 
       function conv_intensidade(inten) {
         return (inten - 1)/6; // de 0 a 1
+      }
+
+      function calcula_val_temporal(valencia, intensidade, quadros) {
+        var decaimento = Math.pow(0.944, quadros); // perde ~50% a cada 12 horas
+        return valencia * intensidade * decaimento;
+      }
+
+      function monta_arrays_de_mood(dados, min_max, tam_quadro) {
+        var array_moods = {
+          "geral":[],
+          "users":[]
+        };
+        // https://stackoverflow.com/questions/1295584/most-efficient-way-to-create-a-zero-filled-javascript-array
+        var array_indices = Array.apply(null, Array(dados.length)).map(Number.prototype.valueOf,0);
+
+        var n_rodadas = (min_max[1] - min_max[0]) / tam_quadro;
+        for (var i = 0; i < n_rodadas; i++) {
+
+          var t_max = min_max[1] - tam_quadro*i,
+              t_min = t_max - tam_quadro;
+
+          var soma_v_geral = 0;
+
+          // percorre cada usuário
+          for (var i_user = 0; i_user < dados.length; i_user++) {
+
+            var soma_v = 0;
+            if (i == 0) { // primeira passada
+              array_moods["users"][i_user] = [];
+            }
+
+            while (true) { // dentro daquele quadro temporal, soma todos as valências
+              if (array_indices[i_user] >= dados[i_user].length) {
+                break;
+              }
+              var t = Date.parse(dados[i_user][array_indices[i_user]].timestamp);
+              if (t > t_max || t < t_min) {
+                break;
+              }
+              var valencia = calcula_val_temporal(
+                dados[i_user][array_indices[i_user]].valencia, 
+                dados[i_user][array_indices[i_user]].intensidade, i);
+
+              soma_v += valencia;
+              array_indices[i_user] += 1; // próximo tweet
+            }
+            array_moods["users"][i_user].push(soma_v);
+            soma_v_geral += soma_v; // acumula todos os momentos 
+          }
+
+          array_moods["geral"].push(soma_v_geral);
+        }
+
+        // acumulador 
+        var acumulado_users = Array.apply(null, Array(dados.length)).map(Number.prototype.valueOf,0),
+        acumulado_geral;
+
+        for (i = n_rodadas - 1; i >= 0; i--) {
+          for (i_user = 0; i_user < dados.length; i_user++) {
+            // quanto mais distante do momento atual, mais tênue a valência, mas ainda assim
+            // soma ela num acumulado que estamos carregando até esse momento atual. (e depois
+            // coloca-se esse acumulado no array de moods)
+            acumulado_users[i_user] += array_moods["users"][i_user][i];
+            array_moods["users"][i_user][i] = acumulado_users[i_user];
+          }
+          acumulado_geral += array_moods["geral"][i];
+          array_moods["geral"][i] = acumulado_geral;
+        }
+
+        return array_moods;
+
       }
 
       function monta_array_user(user, dados) {
@@ -417,11 +490,10 @@
           plota_um_usuario(canvas, dados[i], users[i], max_geral, delta_y, i)
         }
 
+        var tam_quadro = 1000 * 60 * 60 * 1; // quadro de uma hora?
+        catrambias = monta_arrays_de_mood(dados, min_max, tam_quadro);
+
       }
-
-
-      // duvida: há blur para svg??
-
 
     </script>
   </body>
