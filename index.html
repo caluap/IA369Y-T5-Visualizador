@@ -552,8 +552,38 @@
             return lines;
           }
 
+          function plota_ticks_e_gradiente(canvas, quadros, tamanho_x, tamanho_y) {
+            for (var i = 0; i < quadros; i++) {
+              canvas.append("rect")
+                    .attr("x", function(d) {
+                      var x =
+                        i * escala_x*(1-peso_decaimento_tick) + 
+                        i * escala_x*peso_decaimento_tick * calcula_decaimento(i)
+                        + pad;
+                      return x;
+                    })
+                    .attr("width","1")
+                    .attr("y",0)
+                    .attr("height",tamanho_y)
+                    .attr("fill","rgba(0,0,0,0.1)");
+            }
+            canvas.append("rect")
+                  .attr("x", pad)
+                  .attr("y",0)
+                  .attr("width", tamanho_x)
+                  .attr("height", tamanho_y/2)
+                  .attr("fill","rgba(0,255,0,0.2)");
+            canvas.append("rect")
+                  .attr("x", pad)
+                  .attr("y",tamanho_y/2)
+                  .attr("width", tamanho_x)
+                  .attr("height", tamanho_y/2)
+                  .attr("fill","rgba(255,0,0,0.2)");
+          }
+
           function calcula_tamanho_canvas(quadros) {
-            var tamanho_x = quadros * escala_x*(1-peso_decaimento_tick) + quadros * escala_x*peso_decaimento_tick * calcula_decaimento(quadros);
+            var tamanho_x = quadros * escala_x*(1-peso_decaimento_tick) + 
+                            quadros * escala_x*peso_decaimento_tick * calcula_decaimento(quadros);
             return {"x":tamanho_x + 2*pad, "y":tamanho_y + 2*pad}; 
           }
 
@@ -567,13 +597,17 @@
           var tamanho_y = 300;
           var escala_x = 50;
 
-          var tamanho_canvas = calcula_tamanho_canvas(catrambias["geral"].length);
+          var quadros = catrambias["geral"].length;
+
+          var tamanho_canvas = calcula_tamanho_canvas(quadros);
           
           var canvas = d3.select("body")
                         .append("svg")
                         .attr("width", tamanho_canvas.x)
                         .attr("height", tamanho_canvas.y)
                         .append("g");
+
+          plota_ticks_e_gradiente(canvas, quadros, tamanho_canvas.x - 2*pad, tamanho_y);
           
           var lineFunction = d3.line()
                             .x(function(d) { return d.x; })
@@ -606,7 +640,7 @@
 
           var path = monta_path(catrambias["geral"]);
           // console.log(path);
-          plota_linha(canvas, path, 0, {"stroke":"blue","stroke-width":"4"});
+          plota_linha(canvas, path, 0, {"stroke":"black","stroke-width":"4"});
           
         }
 
