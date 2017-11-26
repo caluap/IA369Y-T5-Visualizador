@@ -531,25 +531,34 @@
             "stroke-width":1
           }) {
 
-            var lines = canvas.selectAll("lines")
-                        .data(path)
-                        .enter()
-                        .append("line")
-                        .attr("x1",function (d) { return d.x1 + pad; })
-                        .attr("y1",function (d) { return d.y1 + offset_y; })
-                        .attr("x2",function (d) { return d.x2 + pad; })
-                        .attr("y2",function (d) { return d.y2 + offset_y; })
-                        .attr("fill", "none");
+            // var lines = canvas.selectAll("lines")
+            //             .data(path)
+            //             .enter()
+            //             .append("line")
+            //             .attr("x1",function (d) { return d.x1 + pad; })
+            //             .attr("y1",function (d) { return d.y1 + offset_y; })
+            //             .attr("x2",function (d) { return d.x2 + pad; })
+            //             .attr("y2",function (d) { return d.y2 + offset_y; })
+            //             .attr("fill", "none");
+            
+            var lineFunction = d3.line()
+                              .curve(d3.curveMonotoneX)
+                              .x(function(d) { return d.x1 + pad; })
+                              .y(function(d) { return d.y1; });
+
+            var l = d3.select("body").select("svg")
+                  .append("path")
+                  .attr("d", lineFunction(path))
+                  .attr("fill","none");
 
             // https://stackoverflow.com/questions/684672/how-do-i-loop-through-or-enumerate-a-javascript-object                        
             for (var key in estilo) {
               if (estilo.hasOwnProperty(key)) { 
-                lines.attr(key, estilo[key]);
+                l.attr(key, estilo[key]);
               }
             }
 
-
-            return lines;
+            // return lines;
           }
 
           function plota_ticks_e_gradiente(canvas, quadros, tamanho_x, tamanho_y) {
@@ -587,15 +596,15 @@
             return {"x":tamanho_x + 2*pad, "y":tamanho_y + 2*pad}; 
           }
 
-          var tam_quadro = 1000 * 60 * 60 * 1; // quadro de uma hora?
-          tam_quadro = 1000 * 60 * 60 * 6; // quadro de 6 horas?
+          // var tam_quadro = 1000 * 60 * 60 * 1; // quadro de uma hora?
+          tam_quadro = 1000 * 60 * 60 * 4; // quadro de 6 horas?
           catrambias = monta_arrays_de_mood(dados, min_max, tam_quadro);
 
           var ticks_por_dia = 4;
           var peso_decaimento_tick = 0.5;
 
           var tamanho_y = 300;
-          var escala_x = 50;
+          var escala_x = 100;
 
           var quadros = catrambias["geral"].length;
 
@@ -608,10 +617,6 @@
                         .append("g");
 
           plota_ticks_e_gradiente(canvas, quadros, tamanho_canvas.x - 2*pad, tamanho_y);
-          
-          var lineFunction = d3.line()
-                            .x(function(d) { return d.x; })
-                            .y(function(d) { return d.y; });
 
           var min_geral = d3.min(catrambias["geral"]), max_geral = d3.max(catrambias["geral"]);
 
