@@ -99,8 +99,9 @@
       }
 
       function calcula_decaimento(quadro) {
-        var decaimento = Math.pow(0.944, quadro); // perde ~50% a cada 12 horas
-        decaimento = Math.pow(0.972, quadro); // perde quase 100% em uma semana
+        // var decaimento = Math.pow(0.944, quadro); // perde ~50% a cada 12 horas se a janela for de 1 hora
+        // var decaimento = Math.pow(0.972, quadro); // perde quase 100% em uma semana se a janela for de 1 hora
+        var decaimento = Math.pow(0.975, quadro); // ~50%/semana com janela de 6 horas
         return decaimento;
       }
 
@@ -459,27 +460,31 @@
                           .range([0, y_dia]);
 
 
-        // canvas
-
-        var width = dados.length * delta_x_user + 2 * pad;
-        var height = y_total(min_max[0], min_max[1], y_dia, ms_dia) + 2 * pad + pad_text;
-
-        var canvas = d3.select("body")
-                      .append("svg")
-                      .attr("width", width)
-                      .attr("height", height)
-                      .append("g");
-
-
-        // ticks
-
-        var m0 = moment(min_max[1]);
-        var ms_primeiro_tick = m0.diff(moment(m0).hour(0).minute(0).second(0));
-        var n_dias = Math.floor((min_max[1] - min_max[0] - ms_primeiro_tick) / ms_dia);
-        var ticks_por_dia = 4;
-
+        // ========================
+        // linha do tempo de tweets
+        // ========================
 
         if (!true) {
+
+          // canvas
+
+          var width = dados.length * delta_x_user + 2 * pad;
+          var height = y_total(min_max[0], min_max[1], y_dia, ms_dia) + 2 * pad + pad_text;
+
+          var canvas = d3.select("body")
+                        .append("svg")
+                        .attr("width", width)
+                        .attr("height", height)
+                        .append("g");
+
+
+          // ticks
+
+          var m0 = moment(min_max[1]);
+          var ms_primeiro_tick = m0.diff(moment(m0).hour(0).minute(0).second(0));
+          var n_dias = Math.floor((min_max[1] - min_max[0] - ms_primeiro_tick) / ms_dia);
+
+
           plota_ticks(canvas, ms_primeiro_tick * y_dia/ms_dia, n_dias * ticks_por_dia, y_dia / ticks_por_dia, users.length);
   
           // semana vs fim-de-semana
@@ -495,16 +500,21 @@
   
             plota_um_usuario(canvas, dados[i], users[i], max_geral, delta_y, i)
           }
+
         } else {
+
+          // =============
+          // soma de moods
+          // =============
 
           function monta_path(dados) {
 
             var path = [];
             for (var i = 1; i < dados.length; i++) {
               var 
-                x1 = (i-1) * escala_x/2 + (i-1) * escala_x/2 * calcula_decaimento(i-1),
+                x1 = (i-1) * escala_x*(1-peso_decaimento_tick) + (i-1) * escala_x*peso_decaimento_tick * calcula_decaimento(i-1),
                 y1 = escala_y(dados[i-1]),
-                x2 = i * escala_x/2 + i * escala_x/2 * calcula_decaimento(i),
+                x2 = i * escala_x*(1-peso_decaimento_tick) + i * escala_x*peso_decaimento_tick * calcula_decaimento(i),
                 y2 = escala_y(dados[i]);
               path.push({
                 "x1": x1,
@@ -541,14 +551,33 @@
 
             return lines;
           }
+
+          function calcula_tamanho_canvas(quadros) {
+            var tamanho_x = quadros * escala_x*(1-peso_decaimento_tick) + quadros * escala_x*peso_decaimento_tick * calcula_decaimento(quadros);
+            return {"x":tamanho_x + 2*pad, "y":tamanho_y + 2*pad}; 
+          }
+
+          var tam_quadro = 1000 * 60 * 60 * 1; // quadro de uma hora?
+          tam_quadro = 1000 * 60 * 60 * 6; // quadro de 6 horas?
+          catrambias = monta_arrays_de_mood(dados, min_max, tam_quadro);
+
+          var ticks_por_dia = 4;
+          var peso_decaimento_tick = 0.5;
+
+          var tamanho_y = 300;
+          var escala_x = 50;
+
+          var tamanho_canvas = calcula_tamanho_canvas(catrambias["geral"].length);
           
-          var escala_x = 10;
+          var canvas = d3.select("body")
+                        .append("svg")
+                        .attr("width", tamanho_canvas.x)
+                        .attr("height", tamanho_canvas.y)
+                        .append("g");
+          
           var lineFunction = d3.line()
                             .x(function(d) { return d.x; })
                             .y(function(d) { return d.y; });
-
-          var tam_quadro = 1000 * 60 * 60 * 1; // quadro de uma hora?
-          catrambias = monta_arrays_de_mood(dados, min_max, tam_quadro);
 
           var min_geral = d3.min(catrambias["geral"]), max_geral = d3.max(catrambias["geral"]);
 
@@ -565,19 +594,18 @@
           }
 
           maior_valor = Math.abs(min_geral) > max_geral ? Math.abs(min_geral) : max_geral;
-          console.log(maior_valor);
 
           var escala_y = d3.scaleLinear()
                           .domain([-maior_valor, 0, maior_valor])
-                          .range([300, 150, 0]);
+                          .range([tamanho_y, Math.floor(tamanho_y/2), 0]);
 
           for (var i = 0; i < catrambias["users"].length; i++) {
             var path_u = monta_path(catrambias["users"][i]);
-            // plota_linha(canvas, path_u, 0, {"stroke":"rgba(0,0,0,0.3)","stroke-width":"1"});
+            plota_linha(canvas, path_u, 0, {"stroke":"rgba(0,0,0,0.3)","stroke-width":"1"});
           }
 
           var path = monta_path(catrambias["geral"]);
-          console.log(path);
+          // console.log(path);
           plota_linha(canvas, path, 0, {"stroke":"blue","stroke-width":"4"});
           
         }
