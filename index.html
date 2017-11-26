@@ -98,9 +98,14 @@
         return (inten - 1)/6; // de 0 a 1
       }
 
-      function calcula_val_temporal(valencia, intensidade, quadros) {
-        var decaimento = Math.pow(0.944, quadros); // perde ~50% a cada 12 horas
-        decaimento = Math.pow(0.972, quadros); // perde quase 100% em uma semana
+      function calcula_decaimento(quadro) {
+        var decaimento = Math.pow(0.944, quadro); // perde ~50% a cada 12 horas
+        decaimento = Math.pow(0.972, quadro); // perde quase 100% em uma semana
+        return decaimento;
+      }
+
+      function calcula_val_temporal(valencia, intensidade, quadro) {
+        var decaimento = calcula_decaimento(quadro);
         return valencia * intensidade * decaimento;
       }
 
@@ -492,24 +497,14 @@
           }
         } else {
 
-          var escala_x = 10;
-
-          var lineFunction = d3.line()
-                            .x(function(d) { return d.x; })
-                            .y(function(d) { return d.y; });
-
           function monta_path(dados) {
-
-            var escala_y = d3.scaleLinear()
-                          .domain([d3.min(dados), d3.max(dados)])
-                          .range([100, 0]);
 
             var path = [];
             for (var i = 1; i < dados.length; i++) {
               var 
-                x1 = (i-1) * escala_x,
+                x1 = (i-1) * escala_x,// * calcula_decaimento(i-1),
                 y1 = escala_y(dados[i-1]),
-                x2 = i * escala_x,
+                x2 = i * escala_x,// * calcula_decaimento(i),
                 y2 = escala_y(dados[i]);
               path.push({
                 "x1": x1,
@@ -521,25 +516,69 @@
             return path;
           }
 
+          function plota_linha(canvas, path, offset_y, estilo = {
+            "stroke":"black",
+            "stroke-width":1
+          }) {
+
+            var lines = canvas.selectAll("lines")
+                        .data(path)
+                        .enter()
+                        .append("line")
+                        .attr("x1",function (d) { return d.x1 + pad; })
+                        .attr("y1",function (d) { return d.y1 + offset_y; })
+                        .attr("x2",function (d) { return d.x2 + pad; })
+                        .attr("y2",function (d) { return d.y2 + offset_y; })
+                        .attr("fill", "none");
+
+            // https://stackoverflow.com/questions/684672/how-do-i-loop-through-or-enumerate-a-javascript-object                        
+            for (var key in estilo) {
+              if (estilo.hasOwnProperty(key)) { 
+                lines.attr(key, estilo[key]);
+              }
+            }
+
+
+            return lines;
+          }
+          
+          var escala_x = 100;
+          var lineFunction = d3.line()
+                            .x(function(d) { return d.x; })
+                            .y(function(d) { return d.y; });
+
           var tam_quadro = 1000 * 60 * 60 * 1; // quadro de uma hora?
           catrambias = monta_arrays_de_mood(dados, min_max, tam_quadro);
 
+          var min_geral = d3.min(catrambias["geral"]), max_geral = d3.max(catrambias["geral"]);
+
+          // procura um menor menor ou maior maior nos usuários
+          for (var i = 0; i < catrambias["users"].length; i++) {
+            var min_local = d3.min(catrambias["users"][i]),
+            max_local = d3.max(catrambias["users"][i]);
+            if (min_local < min_geral) {
+              min_geral = min_local; 
+            }
+            if (max_local > max_geral) {
+              max_geral = max_local;
+            }
+          }
+
+          maior_valor = Math.abs(min_geral) > max_geral ? Math.abs(min_geral) : max_geral;
+          console.log(maior_valor);
+
+          var escala_y = d3.scaleLinear()
+                          .domain([-maior_valor, 0, maior_valor])
+                          .range([300, 150, 0]);
+
+          for (var i = 0; i < catrambias["users"].length; i++) {
+            var path_u = monta_path(catrambias["users"][i]);
+            // plota_linha(canvas, path_u, 0, {"stroke":"rgba(0,0,0,0.3)","stroke-width":"1"});
+          }
+
           var path = monta_path(catrambias["geral"]);
-
           console.log(path);
-
-          var lines = canvas.selectAll("lines")
-                      .data(path)
-                      .enter()
-                      // .interpolate("basis")
-                      .append("line")
-                      .attr("x1",function (d) { return d.x1; })
-                      .attr("y1",function (d) { return d.y1; })
-                      .attr("x2",function (d) { return d.x2; })
-                      .attr("y2",function (d) { return d.y2; })
-                      .attr("stroke", "blue")
-                      .attr("stroke-width", 2)
-                      .attr("fill", "none");
+          plota_linha(canvas, path, 0, {"stroke":"blue","stroke-width":"4"});
           
         }
 
