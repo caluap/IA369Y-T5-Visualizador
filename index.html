@@ -502,9 +502,9 @@
             var path = [];
             for (var i = 1; i < dados.length; i++) {
               var 
-                x1 = (i-1) * escala_x,// * calcula_decaimento(i-1),
+                x1 = (i-1) * escala_x/2 + (i-1) * escala_x/2 * calcula_decaimento(i-1),
                 y1 = escala_y(dados[i-1]),
-                x2 = i * escala_x,// * calcula_decaimento(i),
+                x2 = i * escala_x/2 + i * escala_x/2 * calcula_decaimento(i),
                 y2 = escala_y(dados[i]);
               path.push({
                 "x1": x1,
@@ -542,7 +542,7 @@
             return lines;
           }
           
-          var escala_x = 100;
+          var escala_x = 10;
           var lineFunction = d3.line()
                             .x(function(d) { return d.x; })
                             .y(function(d) { return d.y; });
