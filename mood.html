@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="/js/papaparse.js"></script>
+    <script src="/js/d3.js"></script>
+    <script src="/js/moment.js"></script>
+    <link href="https://fonts.googleapis.com/css?family=ABeeZee" rel="stylesheet">
+    
+    <title>mood</title>
+  </head>
+  <body>
+
+    <style>
+      body {
+        padding: 10px;
+      }
+
+      .label-user {
+        position: absolute;
+        top: 50px;
+        font-size: 10px;
+        font-family: 'ABeeZee', sans-serif;
+        transform: rotateZ(-45deg);
+        transform-origin: top left;
+      }
+
+      div.tooltip {	
+        position: absolute;
+        max-width: 240px;		
+        min-width: 120px;
+        padding: 2px;				
+        font-family: 'ABeeZee', sans-serif;		
+        font-size: 11px;
+        background: rgba(255,255,255,0.7);	
+        padding: 3px;
+        border-radius: 2px;
+        pointer-events: none;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.2);	
+      }
+
+
+    </style>
+
+    <script>
+
+
+
+
+      var catrambias;
+
+      var dados = [], users = [], max_delta_t = [];
+      Papa.parse("tweets_classificados.csv", {
+        download: true,
+        header: true,
+        complete: function(results) {
+          
+          // daqui: https://stackoverflow.com/questions/17780508/selecting-distinct-values-from-a-json
+          
+          var lookup = {};
+          var items = results.data;
+          
+          for (var item, i = 0; item = items[i++];) {
+            var user = item.id;
+          
+            if (!(user in lookup)) {
+              lookup[user] = 1;
+              users.push(user);
+              dados_de_um = monta_array_user(user, results.data); 
+              dados.push(dados_de_um);
+              max_delta_t.push(d3.max(dados_de_um.map(function(d) {
+                return d.delta_t;
+              })));
+            }
+          }
+
+          var min_max = acha_min_max_geral(results.data);
+
+          desenha(dados, users, max_delta_t, min_max);
+
+        }
+      });
+
+      function acha_min_max_geral(results) {
+        milisegundos = [];
+        for (i = 0; i < results.length; i++) {
+          milisegundos.push(Date.parse(results[i].data)); // está em milisegundos. quero em segundos
+        }
+        return [
+          d3.min(milisegundos),
+          d3.max(milisegundos)
+        ];
+      }
+
+      function conv_valencia(val) {
+        return (val - 4)/3; // de -1 a 1
+      }
+
+      function conv_intensidade(inten) {
+        return (inten - 1)/6; // de 0 a 1
+      }
+
+      function calcula_decaimento(quadro) {
+        // var decaimento = Math.pow(0.944, quadro); // perde ~50% a cada 12 horas se a janela for de 1 hora
+        // var decaimento = Math.pow(0.972, quadro); // perde quase 100% em uma semana se a janela for de 1 hora
+        var decaimento = Math.pow(0.975, quadro); // ~50%/semana com janela de 6 horas
+        // var decaimento = 1; // sem decaimento
+        return decaimento;
+      }
+
+      function calcula_val_temporal(valencia, intensidade, quadro) {
+        var decaimento = calcula_decaimento(quadro);
+        return valencia * intensidade * decaimento;
+      }
+
+      function monta_arrays_de_mood(dados, min_max, tam_quadro) {
+
+        var array_moods = {
+          "geral":[],
+          "users":[]
+        };
+
+        var array_indices;
+        
+        var n_rodadas = Math.round((min_max[1] - min_max[0]) / tam_quadro);
+
+        // https://stackoverflow.com/questions/1295584/most-efficient-way-to-create-a-zero-filled-javascript-array
+        array_indices = Array.apply(null, Array(dados.length)).map(Number.prototype.valueOf,0);
+
+        for (var i = 0; i < n_rodadas; i++) {
+
+          // define os limites temporais de cada quadro
+          // (lembrando que min_max[1] é o t0)
+          var t_max = min_max[1] - tam_quadro*i,
+              t_min = t_max - tam_quadro;
+
+          var soma_v_geral = 0;
+
+          // percorre cada usuário
+          for (var i_user = 0; i_user < dados.length; i_user++) {
+
+            var soma_v = 0;
+            if (i == 0) { // primeira passada
+              array_moods["users"][i_user] = [];
+            }
+
+            while (true) { // dentro daquele quadro temporal, soma todos as valências
+              if (array_indices[i_user] >= dados[i_user].length) {
+                break;
+              }
+              var t = Date.parse(dados[i_user][array_indices[i_user]].timestamp);
+              if (t > t_max || t < t_min) {
+                break;
+              }
+              var valencia = calcula_val_temporal(
+                dados[i_user][array_indices[i_user]].valencia, 
+                dados[i_user][array_indices[i_user]].intensidade, i);
+              soma_v += valencia;
+              array_indices[i_user] += 1; // próximo tweet
+            }
+            
+            array_moods["users"][i_user].push(soma_v);
+            soma_v_geral += soma_v; // acumula todos os momentos 
+          }
+          array_moods["geral"].push(soma_v_geral);
+
+          // acumulador 
+          var acumulado_users = Array.apply(null, Array(dados.length)).map(Number.prototype.valueOf,0),
+          acumulado_geral = 0;
+
+        }
+
+
+
+        for (i = n_rodadas - 1; i >= 0; i--) {
+            for (i_user = 0; i_user < dados.length; i_user++) {
+              // quanto mais distante do momento atual, mais tênue a valência, mas ainda assim
+              // soma ela num acumulado que estamos carregando até esse momento atual. (e depois
+              // coloca-se esse acumulado no array de moods)
+              acumulado_users[i_user] += array_moods["users"][i_user][i];
+              array_moods["users"][i_user][i] = acumulado_users[i_user];
+            }
+            acumulado_geral += array_moods["geral"][i];
+            array_moods["geral"][i] = acumulado_geral;
+          }
+
+        return array_moods;
+
+      }
+
+      function monta_array_user(user, dados) {
+
+        var array_user = [];
+
+        var s0, s1 = null;
+        var t0;
+
+        for (var i = 0; i < dados.length; i++) {
+          if (dados[i].id == user) {
+
+            array_user.push({});
+            i2 = array_user.length - 1;
+
+            // calcula distância de tempo
+            if (s1 == null) { // primeira vez
+              array_user[i2]["delta_t"] = 0;
+              array_user[i2]["delta_abs"] = 0;
+              s1 = Date.parse(dados[i].data);
+              t0 = s1;
+            } else {
+              s0 = s1;
+              s1 = Date.parse(dados[i].data);
+              var delta_t = s0 - s1; // qtos segundos entre eles?
+              array_user[i2]["delta_t"] = delta_t;
+
+              array_user[i2]["delta_abs"] = t0 - s1; // qtos segundos entre o tweet mais recente e este?
+
+            }
+
+            // outras informações
+
+            array_user[i2]["tweet"] = dados[i].txt;
+            array_user[i2]["timestamp"] = dados[i].data;
+            array_user[i2]["valencia"] = conv_valencia(dados[i].val);
+            array_user[i2]["intensidade"] = conv_intensidade(dados[i].int);
+
+          }
+        }
+
+        return array_user;
+      } 
+
+      
+      function desenha(dados, users, max, min_max) {
+        
+        var pad = 40; // margem top e bottom no canvas
+
+          // =============
+          // soma de moods
+          // =============
+
+          function monta_path(dados) {
+
+            var path = [];
+            for (var i = 1; i < dados.length; i++) {
+              var 
+                x1 = (i-1) * escala_x*(1-peso_decaimento_tick) + (i-1) * escala_x*peso_decaimento_tick * calcula_decaimento(i-1),
+                y1 = escala_y(dados[i-1]),
+                x2 = i * escala_x*(1-peso_decaimento_tick) + i * escala_x*peso_decaimento_tick * calcula_decaimento(i),
+                y2 = escala_y(dados[i]);
+              path.push({
+                "x1": x1,
+                "y1": y1,
+                "x2": x2,
+                "y2": y2
+              });
+            }
+            return path;
+          }
+
+          function plota_linha(canvas, path, offset_x, offset_y, estilo = {
+            "stroke":"black",
+            "stroke-width":1
+          }) {
+
+            // var lines = canvas.selectAll("lines")
+            //             .data(path)
+            //             .enter()
+            //             .append("line")
+            //             .attr("x1",function (d) { return d.x1 + pad; })
+            //             .attr("y1",function (d) { return d.y1 + offset_y; })
+            //             .attr("x2",function (d) { return d.x2 + pad; })
+            //             .attr("y2",function (d) { return d.y2 + offset_y; })
+            //             .attr("fill", "none");
+
+            var lineFunction = d3.line()
+                              .curve(d3.curveMonotoneX)
+                              .x(function(d) { return d.x1 + pad + offset_x; })
+                              .y(function(d) { return d.y1 + offset_y; });
+
+            var l = d3.select("body").select("svg")
+                  .append("path")
+                  .attr("d", lineFunction(path))
+                  .attr("fill","none");
+
+            // https://stackoverflow.com/questions/684672/how-do-i-loop-through-or-enumerate-a-javascript-object                        
+            for (var key in estilo) {
+              if (estilo.hasOwnProperty(key)) { 
+                l.attr(key, estilo[key]);
+              }
+            }
+
+            return l;
+          }
+
+          function plota_ticks_e_gradiente(canvas, quadros, tamanho_x, tamanho_y) {
+            for (var i = 0; i < quadros; i++) {
+              canvas.append("rect")
+                    .attr("x", function(d) {
+                      var x =
+                        i * escala_x*(1-peso_decaimento_tick) + 
+                        i * escala_x*peso_decaimento_tick * calcula_decaimento(i)
+                        + pad;
+                      return x;
+                    })
+                    .attr("width","1")
+                    .attr("y",0)
+                    .attr("height",tamanho_y)
+                    .attr("fill","rgba(0,0,0,0.1)");
+            }
+            canvas.append("rect")
+                  .attr("x", pad)
+                  .attr("y",0)
+                  .attr("width", tamanho_x)
+                  .attr("height", tamanho_y/2)
+                  .attr("fill","rgba(0,255,0,0.2)");
+            canvas.append("rect")
+                  .attr("x", pad)
+                  .attr("y",tamanho_y/2)
+                  .attr("width", tamanho_x)
+                  .attr("height", tamanho_y/2)
+                  .attr("fill","rgba(255,0,0,0.2)");
+          }
+
+          function calcula_tamanho_canvas(quadros) {
+            var tamanho_x = quadros * escala_x*(1-peso_decaimento_tick) + 
+                            quadros * escala_x*peso_decaimento_tick * calcula_decaimento(quadros);
+            return {"x":tamanho_x + 2*pad, "y":tamanho_y + 2*pad}; 
+          }
+
+          // ----------
+          // definições
+          // ----------
+
+
+          // var tam_quadro = 1000 * 60 * 60 * 1; // quadro de uma hora?
+          // var tam_quadro = 1000 * 60 * 60 * 4; // quadro de 4 horas?
+          var tam_quadro = 1000 * 60 * 60 * 6; // quadro de 6 horas?
+          var catrambias = monta_arrays_de_mood(dados, min_max, tam_quadro);
+
+          var peso_decaimento_tick = 0; // 0.5;  quantos % de tick “decaído”?
+
+          var tamanho_y = 600;
+          var escala_x = 30;
+
+          var quadros = catrambias["geral"].length;
+
+          var tamanho_canvas = calcula_tamanho_canvas(quadros);
+          
+          var canvas = d3.select("body")
+                        .append("svg")
+                        .attr("width", tamanho_canvas.x)
+                        .attr("height", tamanho_canvas.y)
+                        .append("g");
+
+          plota_ticks_e_gradiente(canvas, quadros, tamanho_canvas.x - 2*pad, tamanho_y);
+
+          var min_geral = d3.min(catrambias["geral"]), max_geral = d3.max(catrambias["geral"]);
+
+          // procura um menor menor ou maior maior nos usuários
+          for (var i = 0; i < catrambias["users"].length; i++) {
+            var min_local = d3.min(catrambias["users"][i]),
+            max_local = d3.max(catrambias["users"][i]);
+            if (min_local < min_geral) {
+              min_geral = min_local; 
+            }
+            if (max_local > max_geral) {
+              max_geral = max_local;
+            }
+          }
+
+          maior_valor = Math.abs(min_geral) > max_geral ? Math.abs(min_geral) : max_geral;
+
+          var escala_y = d3.scaleLinear()
+                          .domain([-maior_valor, 0, maior_valor])
+                          .range([tamanho_y, Math.floor(tamanho_y/2), 0]);
+
+          for (var i = 0; i < catrambias["users"].length; i++) {
+            var path_u = monta_path(catrambias["users"][i]);
+            plota_linha(canvas, path_u, 0, 0, {"stroke":"rgba(0,0,0,0.3)","stroke-width":"1"});
+          }
+
+          var path = monta_path(catrambias["geral"]);
+          // console.log(path);
+          plota_linha(canvas, path, 0, 0, {"stroke":"black","stroke-width":"4"});
+          
+        }
+
+    </script>
+  </body>
+</html>
