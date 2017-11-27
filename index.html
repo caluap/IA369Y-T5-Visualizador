@@ -111,10 +111,12 @@
       }
 
       function monta_arrays_de_mood(dados, min_max, tam_quadro) {
+
         var array_moods = {
           "geral":[],
           "users":[]
         };
+        
         // https://stackoverflow.com/questions/1295584/most-efficient-way-to-create-a-zero-filled-javascript-array
         var array_indices = Array.apply(null, Array(dados.length)).map(Number.prototype.valueOf,0);
 
@@ -558,7 +560,7 @@
               }
             }
 
-            // return lines;
+            return l;
           }
 
           function plota_ticks_e_gradiente(canvas, quadros, tamanho_x, tamanho_y) {
@@ -596,9 +598,14 @@
             return {"x":tamanho_x + 2*pad, "y":tamanho_y + 2*pad}; 
           }
 
+          // ----------
+          // definições
+          // ----------
+
+
           // var tam_quadro = 1000 * 60 * 60 * 1; // quadro de uma hora?
-          tam_quadro = 1000 * 60 * 60 * 4; // quadro de 6 horas?
-          catrambias = monta_arrays_de_mood(dados, min_max, tam_quadro);
+          var tam_quadro = 1000 * 60 * 60 * 4; // quadro de 6 horas?
+          var catrambias = monta_arrays_de_mood(dados, min_max, tam_quadro);
 
           var ticks_por_dia = 4;
           var peso_decaimento_tick = 0.5;
