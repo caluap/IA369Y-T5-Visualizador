@@ -96,6 +96,14 @@
         return (inten - 1)/6; // de 0 a 1
       }
 
+      function taxa_de_decaimento(milisegundos) {
+        var hora = 1000 * 60 * 60 * 1;
+        var janela = 6 * hora;
+        var n_janelas = milisegundos/janela;
+        
+        return Math.pow(0.9, n_janelas);
+      }
+
       function monta_array_user(user, dados) {
 
         var array_user = [];
@@ -133,6 +141,21 @@
             array_user[i2]["intensidade"] = conv_intensidade(dados[i].int);
 
           }
+        }
+
+        // calcula moods
+        var mood_acumulado = 0;
+        for (var i_user = array_user.length - 1; i_user >= 0; i_user--) {
+          var mood_decaido = 0;
+          if (i_user < array_user.length - 1) { // não é a primeira vez, então há uma posição à frente no vetor
+            mood_decaido = mood_acumulado * taxa_de_decaimento(array_user[i_user+1]["delta_t"]);
+          }
+
+          array_user[i_user]["mood"] = 
+              array_user[i_user]["valencia"] // o tweet em si
+            + mood_decaido;
+
+          mood_acumulado = array_user[i_user]["mood"];
         }
 
         return array_user;
