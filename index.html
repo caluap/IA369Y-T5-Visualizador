@@ -248,19 +248,48 @@
       }
 
 
+      var $_GET = {};
+      if(document.location.toString().indexOf('?') !== -1) {
+        var query = document.location
+        .toString()
+        // get the query string
+        .replace(/^.*?\?/, '')
+        // and remove any existing hash string (thanks, @vrijdenker)
+        .replace(/#.*$/, '')
+        .split('&');
+
+        for(var i=0, l=query.length; i<l; i++) {
+          var aux = decodeURIComponent(query[i]).split('=');
+          $_GET[aux[0]] = aux[1];
+        }
+      }
+
       var cores;
-      if (true) {
+      if ($_GET['tema'] === undefined || $_GET['tema'] == "dia") {
         cores = {
           "tweet_negativo" : "rgba(220,0,0,1)",
           "tweet_neutro"   : "rgba(128,128,160,0.5)",
           "tweet_positivo" : "rgba(0,210,0,1)",
+          "tweet_base"     : "rgba(0,0,0,0.05)",
           "mood_positiva" : "rgba(0,210,0,0.1)",
           "mood_negativa" : "rgba(220,0,0,0.1)",
-          "dia_de_semana" : "rgba(0,0,0,0.05)",
-          "fim_de_semana" : "rgba(0,0,50,0.1)",
-          "ticks" : ["rgba(0,0,0,0.1)","rgba(0,0,0,0.06)","rgba(0,0,0,0.03)"]
+          "dia_de_semana" : "rgba(0,0,0,0.0)",
+          "fim_de_semana" : "rgba(10,10,50,0.1)",
+          "ticks" : ["rgba(0,0,0,0.1)","rgba(0,0,0,0.08)","rgba(0,0,0,0.08)"]
         }
-      } 
+      } else if ($_GET['tema'] == "noite") {
+        cores = {
+          "tweet_negativo" : "rgba(220,0,0,1)",
+          "tweet_neutro"   : "rgba(200,200,200,0.4)",
+          "tweet_positivo" : "rgba(0,210,0,1)",
+          "tweet_base"     : "rgba(40,40,50,1)",
+          "mood_positiva" : "rgba(50,210,50,0.3)",
+          "mood_negativa" : "rgba(220,50,50,0.3)",
+          "dia_de_semana" : "rgba(40,40,50,1)",
+          "fim_de_semana" : "rgba(0,0,0,1)",
+          "ticks" : ["rgba(255,255,255,0.3)","rgba(255,255,255,0.2)","rgba(255,255,255,0.1)"]
+        }
+      }
 
 
       
@@ -450,7 +479,7 @@
                 })
                 .attr("fill",function(d) {
                   if (fundo == 0) {
-                    return "white"; // para que haja menos interferência com as moods plotadas
+                    return cores.tweet_base; // para que haja menos interferência com as moods plotadas
                   }
                   return valence_color_scale(d.valencia);
                 })
@@ -556,13 +585,13 @@
           var n_dias = Math.floor((min_max[1] - min_max[0] - ms_primeiro_tick) / ms_dia);
 
 
-          plota_ticks(canvas, ms_primeiro_tick * y_dia/ms_dia, n_dias * ticks_por_dia, y_dia / ticks_por_dia, users.length);
-  
+          
           // semana vs fim-de-semana
-  
+          
           var array_periodos = monta_array_periodos(min_max[1], min_max[1]-min_max[0]);
           plota_fds(canvas, array_periodos, users.length, y_dia/ms_dia);
-  
+          
+          plota_ticks(canvas, ms_primeiro_tick * y_dia/ms_dia, n_dias * ticks_por_dia, y_dia / ticks_por_dia, users.length);
   
           for (var i = 0; i < dados.length; i++) {
             // quão distante está o primeiro tweet desse usuário de nosso momento “0”?
