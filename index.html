@@ -116,65 +116,89 @@
           "geral":[],
           "users":[]
         };
+
+        var matriz_moods = [];
+
+        var array_indices;
         
-        // https://stackoverflow.com/questions/1295584/most-efficient-way-to-create-a-zero-filled-javascript-array
-        var array_indices = Array.apply(null, Array(dados.length)).map(Number.prototype.valueOf,0);
+        var n_rodadas = Math.round((min_max[1] - min_max[0]) / tam_quadro);
+        var aux = n_rodadas;
 
-        var n_rodadas = (min_max[1] - min_max[0]) / tam_quadro;
-        for (var i = 0; i < n_rodadas; i++) {
+        for (; n_rodadas > 0; n_rodadas--) {
+          
+          // https://stackoverflow.com/questions/1295584/most-efficient-way-to-create-a-zero-filled-javascript-array
+          array_indices = Array.apply(null, Array(dados.length)).map(Number.prototype.valueOf,0);
 
-          var t_max = min_max[1] - tam_quadro*i,
-              t_min = t_max - tam_quadro;
+          for (var i = aux - n_rodadas; i < aux; i++) {
+  
+            // define os limites temporais de cada quadro
+            // (lembrando que min_max[1] é o t0)
+            var t_max = min_max[1] - tam_quadro*i,
+                t_min = t_max - tam_quadro;
 
-          var soma_v_geral = 0;
-
-          // percorre cada usuário
-          for (var i_user = 0; i_user < dados.length; i_user++) {
-
-            var soma_v = 0;
-            if (i == 0) { // primeira passada
-              array_moods["users"][i_user] = [];
-            }
-
-            while (true) { // dentro daquele quadro temporal, soma todos as valências
-              if (array_indices[i_user] >= dados[i_user].length) {
-                break;
+            // console.log(n_rodadas + "  " + i + "  " + t_max + "  " + t_min);
+  
+            var soma_v_geral = 0;
+  
+            // percorre cada usuário
+            for (var i_user = 0; i_user < dados.length; i_user++) {
+  
+              var soma_v = 0;
+              if (i == aux - n_rodadas) { // primeira passada
+                array_moods["users"][i_user] = [];
               }
-              var t = Date.parse(dados[i_user][array_indices[i_user]].timestamp);
-              if (t > t_max || t < t_min) {
-                break;
+  
+              while (true) { // dentro daquele quadro temporal, soma todos as valências
+                if (array_indices[i_user] >= dados[i_user].length) {
+                  break;
+                }
+                var t = Date.parse(dados[i_user][array_indices[i_user]].timestamp);
+                if (t > t_max || t < t_min) {
+                  break;
+                }
+                var valencia = calcula_val_temporal(
+                  dados[i_user][array_indices[i_user]].valencia, 
+                  dados[i_user][array_indices[i_user]].intensidade, i - (aux - n_rodadas));
+                soma_v += valencia;
+                array_indices[i_user] += 1; // próximo tweet
               }
-              var valencia = calcula_val_temporal(
-                dados[i_user][array_indices[i_user]].valencia, 
-                dados[i_user][array_indices[i_user]].intensidade, i);
-
-              soma_v += valencia;
-              array_indices[i_user] += 1; // próximo tweet
+              
+              array_moods["users"][i_user].push(soma_v);
+              soma_v_geral += soma_v; // acumula todos os momentos 
             }
-            array_moods["users"][i_user].push(soma_v);
-            soma_v_geral += soma_v; // acumula todos os momentos 
+            array_moods["geral"].push(soma_v_geral);
           }
 
-          array_moods["geral"].push(soma_v_geral);
-        }
+          // acumulador 
+          var acumulado_users = Array.apply(null, Array(dados.length)).map(Number.prototype.valueOf,0),
+          acumulado_geral = 0;
 
-        // acumulador 
-        var acumulado_users = Array.apply(null, Array(dados.length)).map(Number.prototype.valueOf,0),
-        acumulado_geral;
-
-        for (i = n_rodadas - 1; i >= 0; i--) {
-          for (i_user = 0; i_user < dados.length; i_user++) {
-            // quanto mais distante do momento atual, mais tênue a valência, mas ainda assim
-            // soma ela num acumulado que estamos carregando até esse momento atual. (e depois
-            // coloca-se esse acumulado no array de moods)
-            acumulado_users[i_user] += array_moods["users"][i_user][i];
-            array_moods["users"][i_user][i] = acumulado_users[i_user];
+          for (i = n_rodadas - 1; i >= 0; i--) {
+            for (i_user = 0; i_user < dados.length; i_user++) {
+              // quanto mais distante do momento atual, mais tênue a valência, mas ainda assim
+              // soma ela num acumulado que estamos carregando até esse momento atual. (e depois
+              // coloca-se esse acumulado no array de moods)
+              acumulado_users[i_user] += array_moods["users"][i_user][i];
+              array_moods["users"][i_user][i] = acumulado_users[i_user];
+            }
+            acumulado_geral += array_moods["geral"][i];
+            array_moods["geral"][i] = acumulado_geral;
           }
-          acumulado_geral += array_moods["geral"][i];
-          array_moods["geral"][i] = acumulado_geral;
+
+          matriz_moods.push(array_moods);
+          array_moods = {
+            "geral":[],
+            "users":[]
+          };
+
         }
 
-        return array_moods;
+        // console.log(matriz_moods);
+        // console.log(matriz_moods[1]["users"][0]);
+
+
+
+        return matriz_moods;
 
       }
 
@@ -528,7 +552,7 @@
             return path;
           }
 
-          function plota_linha(canvas, path, offset_y, estilo = {
+          function plota_linha(canvas, path, offset_x, offset_y, estilo = {
             "stroke":"black",
             "stroke-width":1
           }) {
@@ -542,11 +566,11 @@
             //             .attr("x2",function (d) { return d.x2 + pad; })
             //             .attr("y2",function (d) { return d.y2 + offset_y; })
             //             .attr("fill", "none");
-            
+
             var lineFunction = d3.line()
                               .curve(d3.curveMonotoneX)
-                              .x(function(d) { return d.x1 + pad; })
-                              .y(function(d) { return d.y1; });
+                              .x(function(d) { return d.x1 + pad + offset_x; })
+                              .y(function(d) { return d.y1 + offset_y; });
 
             var l = d3.select("body").select("svg")
                   .append("path")
@@ -605,10 +629,11 @@
 
           // var tam_quadro = 1000 * 60 * 60 * 1; // quadro de uma hora?
           var tam_quadro = 1000 * 60 * 60 * 4; // quadro de 6 horas?
-          var catrambias = monta_arrays_de_mood(dados, min_max, tam_quadro);
+          var matriz_moods = monta_arrays_de_mood(dados, min_max, tam_quadro);
+          var catrambias = matriz_moods[0];
 
           var ticks_por_dia = 4;
-          var peso_decaimento_tick = 0.5;
+          var peso_decaimento_tick = 0; // 0.5;  quantos % de tick “decaído”?
 
           var tamanho_y = 300;
           var escala_x = 100;
@@ -620,7 +645,7 @@
           var canvas = d3.select("body")
                         .append("svg")
                         .attr("width", tamanho_canvas.x)
-                        .attr("height", tamanho_canvas.y)
+                        .attr("height", tamanho_canvas.y * 1) // 61 se quiser que apareçam os outros plots
                         .append("g");
 
           plota_ticks_e_gradiente(canvas, quadros, tamanho_canvas.x - 2*pad, tamanho_y);
@@ -647,12 +672,17 @@
 
           for (var i = 0; i < catrambias["users"].length; i++) {
             var path_u = monta_path(catrambias["users"][i]);
-            plota_linha(canvas, path_u, 0, {"stroke":"rgba(0,0,0,0.3)","stroke-width":"1"});
+            plota_linha(canvas, path_u, 0, 0, {"stroke":"rgba(0,0,0,0.3)","stroke-width":"1"});
           }
 
           var path = monta_path(catrambias["geral"]);
           // console.log(path);
-          plota_linha(canvas, path, 0, {"stroke":"black","stroke-width":"4"});
+          plota_linha(canvas, path, 0, 0, {"stroke":"black","stroke-width":"4"});
+
+          for (var i = 1; i < matriz_moods.length; i++) {
+            path = monta_path(matriz_moods[i]["geral"]);
+            plota_linha(canvas, path, escala_x * i, tamanho_y * i, {"stroke":"black","stroke-width":"4"});
+          }
           
         }
 
