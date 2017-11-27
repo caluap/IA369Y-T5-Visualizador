@@ -319,28 +319,41 @@
           var paths = {
             "val_positiva": [],
             "val_negativa": []
+          }, demogorgon_paths = {
+            "val_positiva": [],
+            "val_negativa": []
           }
 
           for (var i = 0; i < dados_user.length; i++) {
-            var y = time_scale(dados_user[i].delta_abs) + pad + pad_text + delta_y;
+            var 
+              y = time_scale(dados_user[i].delta_abs) + pad + pad_text + delta_y,
+              delta_x = x_val_scale(dados_user[i].mood_acumulada),
+              demogorgon_x = x0 - delta_x,
+              normal_x = x0 + delta_x;
 
             if (dados_user[i].mood_acumulada >= 0) { 
               paths["val_negativa"].push({ "x": x0, "y": y });
-              paths["val_positiva"].push({ "x": x0 + x_val_scale(dados_user[i].mood_acumulada), "y": y });              
+              paths["val_positiva"].push({ "x": normal_x, "y": y });
+              demogorgon_paths["val_negativa"].push({ "x": x0, "y": y });
+              demogorgon_paths["val_positiva"].push({ "x": demogorgon_x, "y": y });
             } else {
-              paths["val_negativa"].push({ "x": x0 + x_val_scale(dados_user[i].mood_acumulada), "y": y });        
+              paths["val_negativa"].push({ "x": normal_x, "y": y });        
               paths["val_positiva"].push({ "x": x0, "y": y });
+              demogorgon_paths["val_negativa"].push({ "x": demogorgon_x + x_val_scale(dados_user[i].mood_acumulada), "y": y });        
+              demogorgon_paths["val_positiva"].push({ "x": x0, "y": y });
             }
           }
-          console.log(paths);
-          return paths;
+          return {
+            "normal_paths" : paths,
+            "demogorgon_paths" : demogorgon_paths
+          };
         }
 
 
         function plota_um_usuario(canvas, dados, user, max, delta_y, i) {
 
           var path = calcula_paths(dados, delta_x_user * i + pad, delta_y);
-          // console.log(path);
+          console.log(path);
 
           var text = d3
                     .select("body")
