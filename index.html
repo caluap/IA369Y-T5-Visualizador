@@ -387,9 +387,10 @@
                               .x(function(d) { return d.x + offset_x; })
                               .y(function(d) { return d.y + offset_y; });
 
-            var l = d3.select("body").select("svg")
+            var l = d3.select("body").select("g")
                   .append("path")
-                  .attr("d", lineFunction(path));
+                  .attr("d", lineFunction(path))
+                  .style("z-index","1");
             // console.log(path);
 
             // https://stackoverflow.com/questions/684672/how-do-i-loop-through-or-enumerate-a-javascript-object                        
@@ -406,12 +407,10 @@
         function plota_um_usuario(canvas, dados, user, max, delta_y, i) {
 
           var path = calcula_paths(dados, delta_x_user * i + pad, delta_y);
-          plota_linha(canvas, path["normal_path"]["val_positiva"], 0, 0, {"stroke":"none","fill":"rgba(0,255,0,0.2)"});
-          plota_linha(canvas, path["demogorgon_path"]["val_positiva"], 0, 0, {"stroke":"none","fill":"rgba(0,255,0,0.2)"});
-          plota_linha(canvas, path["normal_path"]["val_negativa"], 0, 0, {"stroke":"none","fill":"rgba(255,0,0,0.2)"});
-          plota_linha(canvas, path["demogorgon_path"]["val_negativa"], 0, 0, {"stroke":"none","fill":"rgba(255,0,0,0.2)"});
-          // plota_linha(canvas, path["normal_path"]["val_negativa"], 0, 0);
-          // plota_linha(canvas, path["demogorgon_path"]["val_negativa"], 0, 0);
+          plota_linha(canvas, path["normal_path"]["val_positiva"], 0, 0, {"stroke":"none","fill":"rgba(0,210,0,0.2)"});
+          plota_linha(canvas, path["demogorgon_path"]["val_positiva"], 0, 0, {"stroke":"none","fill":"rgba(0,210,0,0.2)"});
+          plota_linha(canvas, path["normal_path"]["val_negativa"], 0, 0, {"stroke":"none","fill":"rgba(220,0,0,0.2)"});
+          plota_linha(canvas, path["demogorgon_path"]["val_negativa"], 0, 0, {"stroke":"none","fill":"rgba(220,0,0,0.2)"});
 
           var text = d3
                     .select("body")
@@ -441,6 +440,7 @@
                 })
                 .attr("stroke","black")
                 .attr("stroke-width","0") // só exibe quando o tooltip está acionado
+                .style("z-index","2")
 
                 // http://bl.ocks.org/d3noob/a22c42db65eb00d4e369
                 .on("mouseover", function(d) {
