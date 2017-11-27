@@ -46,6 +46,9 @@
     <script>
 
       var dados = [], users = [], max_delta_t = [];
+
+      var valencia_maxima_acumulada = 0;
+
       Papa.parse("tweets_classificados.csv", {
         download: true,
         header: true,
@@ -151,11 +154,17 @@
             mood_decaido = mood_acumulado * taxa_de_decaimento(array_user[i_user+1]["delta_t"]);
           }
 
-          array_user[i_user]["mood"] = 
+          array_user[i_user]["mood_acumulada"] = 
               array_user[i_user]["valencia"] // o tweet em si
             + mood_decaido;
 
-          mood_acumulado = array_user[i_user]["mood"];
+          mood_acumulado = array_user[i_user]["mood_acumulada"];
+
+          // acha o ponto onde há, para mais ou para menos, a maior valência,
+          // que será usada depois para os gráficos de mood
+          if (Math.abs(mood_acumulado) > valencia_maxima_acumulada) {
+            valencia_maxima_acumulada = Math.abs(mood_acumulado);
+          }
         }
 
         return array_user;
@@ -306,8 +315,32 @@
           return rects;
         }
 
+        function calcula_paths(dados_user, x0, delta_y) {
+          var paths = {
+            "val_positiva": [],
+            "val_negativa": []
+          }
+
+          for (var i = 0; i < dados_user.length; i++) {
+            var y = time_scale(dados_user[i].delta_abs) + pad + pad_text + delta_y;
+
+            if (dados_user[i].mood_acumulada >= 0) { 
+              paths["val_negativa"].push({ "x": x0, "y": y });
+              paths["val_positiva"].push({ "x": x0 + x_val_scale(dados_user[i].mood_acumulada), "y": y });              
+            } else {
+              paths["val_negativa"].push({ "x": x0 + x_val_scale(dados_user[i].mood_acumulada), "y": y });        
+              paths["val_positiva"].push({ "x": x0, "y": y });
+            }
+          }
+          console.log(paths);
+          return paths;
+        }
+
 
         function plota_um_usuario(canvas, dados, user, max, delta_y, i) {
+
+          var path = calcula_paths(dados, delta_x_user * i + pad, delta_y);
+          // console.log(path);
 
           var text = d3
                     .select("body")
@@ -367,6 +400,7 @@
         
  
         var delta_x_user = 100; // tamanho da coluna
+        var amplitude_mood = delta_x_user * 2/3;
         var pad = 40; // margem top e bottom no canvas
         var pad_text = 50; // margem top adicional para os labels de usuário
 
@@ -380,6 +414,11 @@
 
 
         // escalas de conversão
+
+        var x_val_scale = d3.scalePow()
+                            .exponent(0.5)
+                            .domain([-valencia_maxima_acumulada, 0, valencia_maxima_acumulada])
+                            .range([amplitude_mood, 0, amplitude_mood]);
 
         var valence_radius_scale = d3.scaleLinear()
                                     .domain([-1,0,1])
@@ -396,6 +435,7 @@
         var time_scale = d3.scaleLinear()
                           .domain([0, ms_dia])
                           .range([0, y_dia]);
+        
 
 
         // ========================
