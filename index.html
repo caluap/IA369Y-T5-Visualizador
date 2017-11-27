@@ -248,6 +248,21 @@
       }
 
 
+      var cores;
+      if (true) {
+        cores = {
+          "tweet_negativo" : "rgba(220,0,0,1)",
+          "tweet_neutro"   : "rgba(128,128,160,0.5)",
+          "tweet_positivo" : "rgba(0,210,0,1)",
+          "mood_positiva" : "rgba(0,210,0,0.1)",
+          "mood_negativa" : "rgba(220,0,0,0.1)",
+          "dia_de_semana" : "rgba(0,0,0,0.05)",
+          "fim_de_semana" : "rgba(0,0,50,0.1)",
+          "ticks" : ["rgba(0,0,0,0.1)","rgba(0,0,0,0.06)","rgba(0,0,0,0.03)"]
+        }
+      } 
+
+
       
       function desenha(dados, users, max, min_max) {
 
@@ -271,9 +286,9 @@
                         })
                         .attr("fill", function(d) {
                           if (d[2]) { //eh_fds
-                            return "rgba(0,0,50,0.1)";
+                            return cores.fim_de_semana;
                           } 
-                          return "rgba(0,0,0,0.05)"
+                          return cores.dia_de_semana;
                         });
           return rects;
 
@@ -304,12 +319,12 @@
                       })
                       .attr("fill",function(d,i) {
                         if (i % 4 == 0) { // meia-noite
-                          return "rgba(0,0,0,0.1)";
+                          return cores.ticks[0];
                         }
                         if (i % 2 == 0) { // meio-dia
-                          return "rgba(0,0,0,0.06)";
+                          return cores.ticks[1];
                         }
-                        return "rgba(0,0,0,0.03)";
+                        return cores.ticks[2];
                       });
 
           return rects;
@@ -382,7 +397,7 @@
           }) {
 
             var lineFunction = d3.line()
-                              .curve(d3.curveMonotoneY)
+                              .curve(d3.curveMonotoneX)
                               // .curve(d3.curveMonotoneX)
                               .x(function(d) { return d.x + offset_x; })
                               .y(function(d) { return d.y + offset_y; });
@@ -407,10 +422,10 @@
         function plota_um_usuario(canvas, dados, user, max, delta_y, i) {
 
           var path = calcula_paths(dados, delta_x_user * i + pad, delta_y);
-          plota_linha(canvas, path["normal_path"]["val_positiva"], 0, 0, {"stroke":"none","fill":"rgba(0,210,0,0.2)"});
-          plota_linha(canvas, path["demogorgon_path"]["val_positiva"], 0, 0, {"stroke":"none","fill":"rgba(0,210,0,0.2)"});
-          plota_linha(canvas, path["normal_path"]["val_negativa"], 0, 0, {"stroke":"none","fill":"rgba(220,0,0,0.2)"});
-          plota_linha(canvas, path["demogorgon_path"]["val_negativa"], 0, 0, {"stroke":"none","fill":"rgba(220,0,0,0.2)"});
+          plota_linha(canvas, path["normal_path"]["val_positiva"], 0, 0, {"stroke":"none","fill":cores.mood_positiva});
+          plota_linha(canvas, path["demogorgon_path"]["val_positiva"], 0, 0, {"stroke":"none","fill":cores.mood_positiva});
+          plota_linha(canvas, path["normal_path"]["val_negativa"], 0, 0, {"stroke":"none","fill":cores.mood_negativa});
+          plota_linha(canvas, path["demogorgon_path"]["val_negativa"], 0, 0, {"stroke":"none","fill":cores.mood_negativa});
 
           var text = d3
                     .select("body")
@@ -420,7 +435,8 @@
                     .style("left", (i * 100 + pad) + "px");
 
 
-          var circs = canvas.selectAll("circs")
+          for (var fundo = 0; fundo <= 1; fundo++) {
+            var circs = canvas.selectAll("circs")
               .data(dados)
               .enter()
               .append("circle")
@@ -433,6 +449,9 @@
                   return intensity_scale(d.intensidade);
                 })
                 .attr("fill",function(d) {
+                  if (fundo == 0) {
+                    return "white"; // para que haja menos interferência com as moods plotadas
+                  }
                   return valence_color_scale(d.valencia);
                 })
                 .attr("opacity",function (d) {
@@ -440,25 +459,30 @@
                 })
                 .attr("stroke","black")
                 .attr("stroke-width","0") // só exibe quando o tooltip está acionado
-                .style("z-index","2")
+                .style("z-index","2");
+              
+                if (fundo == 1) {                 
+                  // http://bl.ocks.org/d3noob/a22c42db65eb00d4e369
+                  circs.on("mouseover", function(d) {
+                    d3.select(this)
+                      .attr("stroke-width","1");
+                    d3.select(".tooltip")
+                        .html(d.tweet + "<br>" + moment(Date.parse(d.timestamp)).format('llll') + "<br>V:" + d.valencia.toFixed(2) + " / I:" + d.intensidade.toFixed(2))	
+                        .style("left", (d3.event.pageX + 20) + "px")
+                        .style("top", (d3.event.pageY - 28) + "px")
+                        .style("opacity",1);	
+                  })
+                  .on("mouseout", function(d) {	
+                    d3.select(this)
+                      .attr("stroke-width","0");	
+                    d3.select(".tooltip")	
+                      .style("opacity", 0);
+                  });
 
-                // http://bl.ocks.org/d3noob/a22c42db65eb00d4e369
-                .on("mouseover", function(d) {
-                  d3.select(this)
-                    .attr("stroke-width","1");
-                  d3.select(".tooltip")
-                    	.html(d.tweet + "<br>" + moment(Date.parse(d.timestamp)).format('llll') + "<br>V:" + d.valencia.toFixed(2) + " / I:" + d.intensidade.toFixed(2))	
-                      .style("left", (d3.event.pageX + 20) + "px")
-                      .style("top", (d3.event.pageY - 28) + "px")
-                      .style("opacity",1);	
-                })
+                }
+          }
 
-                .on("mouseout", function(d) {	
-                  d3.select(this)
-                    .attr("stroke-width","0");	
-                  d3.select(".tooltip")	
-                    .style("opacity", 0);
-                });
+
 
           return circs;
 
@@ -501,7 +525,7 @@
                                 
         var valence_color_scale = d3.scaleLinear()
                                   .domain([-1,0,1])
-                                  .range(["rgba(220,0,0,1)","rgba(128,128,160,0.5)","rgba(0,210,0,1)"]);
+                                  .range([cores.tweet_negativo,cores.tweet_neutro,cores.tweet_positivo]);
 
         var time_scale = d3.scaleLinear()
                           .domain([0, ms_dia])
