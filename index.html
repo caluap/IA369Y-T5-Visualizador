@@ -270,27 +270,26 @@
           "tweet_negativo" : "rgba(220,0,0,1)",
           "tweet_neutro"   : "rgba(128,128,160,0.5)",
           "tweet_positivo" : "rgba(0,210,0,1)",
-          "tweet_base"     : "rgba(0,0,0,0.05)",
-          "mood_positiva" : "rgba(0,210,0,0.1)",
-          "mood_negativa" : "rgba(220,0,0,0.1)",
+          "tweet_base"     : "rgba(255,255,255,1)",
+          "mood_positiva" : "rgba(0,210,0,0.2)",
+          "mood_negativa" : "rgba(220,0,0,0.2)",
           "dia_de_semana" : "rgba(0,0,0,0.0)",
-          "fim_de_semana" : "rgba(10,10,50,0.1)",
+          "fim_de_semana" : "rgba(10,10,50,0.05)",
           "ticks" : ["rgba(0,0,0,0.1)","rgba(0,0,0,0.08)","rgba(0,0,0,0.08)"]
         }
       } else if ($_GET['tema'] == "noite") {
         cores = {
-          "tweet_negativo" : "rgba(220,0,0,1)",
+          "tweet_negativo" : "rgba(200,50,50,0.9)",
           "tweet_neutro"   : "rgba(200,200,200,0.4)",
-          "tweet_positivo" : "rgba(0,210,0,1)",
-          "tweet_base"     : "rgba(40,40,50,1)",
-          "mood_positiva" : "rgba(50,210,50,0.3)",
-          "mood_negativa" : "rgba(220,50,50,0.3)",
-          "dia_de_semana" : "rgba(40,40,50,1)",
-          "fim_de_semana" : "rgba(0,0,0,1)",
-          "ticks" : ["rgba(255,255,255,0.3)","rgba(255,255,255,0.2)","rgba(255,255,255,0.1)"]
+          "tweet_positivo" : "rgba(50,190,50,0.90)",
+          "tweet_base"     : "rgba(0,0,0,1)",
+          "mood_positiva" : "rgba(50,210,50,0.15)",
+          "mood_negativa" : "rgba(220,50,50,0.15)",
+          "dia_de_semana" : "rgba(25,25,20,1)",
+          "fim_de_semana" : "rgba(5,5,5,1)",
+          "ticks" : ["rgba(255,255,255,0.1)","rgba(255,255,255,0.08)","rgba(255,255,255,0.04)"]
         }
       }
-
 
       
       function desenha(dados, users, max, min_max) {
