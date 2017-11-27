@@ -45,6 +45,25 @@
 
     <script>
 
+      var $_GET = {};
+      if(document.location.toString().indexOf('?') !== -1) {
+        var query = document.location
+          .toString()
+          // get the query string
+          .replace(/^.*?\?/, '')
+          // and remove any existing hash string (thanks, @vrijdenker)
+          .replace(/#.*$/, '')
+          .split('&');
+
+        for(var i=0, l=query.length; i<l; i++) {
+          var aux = decodeURIComponent(query[i]).split('=');
+          $_GET[aux[0]] = aux[1];
+        }
+      }
+
+
+
+
       var catrambias;
 
       var dados = [], users = [], max_delta_t = [];
@@ -466,6 +485,8 @@
         var ms_dia = 24 * 60 * 60 * 1000;
         var y_dia = 400;
         var max_geral = d3.max(max);
+        var ticks_por_dia = 4;
+
 
         // escalas de conversão
 
@@ -490,7 +511,7 @@
         // linha do tempo de tweets
         // ========================
 
-        if (!true) {
+        if ($_GET['f'] === undefined || $_GET['f'] == 0) {      
 
           // canvas
 
@@ -628,15 +649,15 @@
 
 
           // var tam_quadro = 1000 * 60 * 60 * 1; // quadro de uma hora?
-          var tam_quadro = 1000 * 60 * 60 * 4; // quadro de 6 horas?
+          // var tam_quadro = 1000 * 60 * 60 * 4; // quadro de 4 horas?
+          var tam_quadro = 1000 * 60 * 60 * 6; // quadro de 6 horas?
           var matriz_moods = monta_arrays_de_mood(dados, min_max, tam_quadro);
           var catrambias = matriz_moods[0];
 
-          var ticks_por_dia = 4;
           var peso_decaimento_tick = 0; // 0.5;  quantos % de tick “decaído”?
 
-          var tamanho_y = 300;
-          var escala_x = 100;
+          var tamanho_y = 600;
+          var escala_x = 30;
 
           var quadros = catrambias["geral"].length;
 
@@ -679,10 +700,10 @@
           // console.log(path);
           plota_linha(canvas, path, 0, 0, {"stroke":"black","stroke-width":"4"});
 
-          for (var i = 1; i < matriz_moods.length; i++) {
-            path = monta_path(matriz_moods[i]["geral"]);
-            plota_linha(canvas, path, escala_x * i, tamanho_y * i, {"stroke":"black","stroke-width":"4"});
-          }
+          // for (var i = 1; i < matriz_moods.length; i++) {
+          //   path = monta_path(matriz_moods[i]["geral"]);
+          //   plota_linha(canvas, path, escala_x * i, tamanho_y * i, {"stroke":"black","stroke-width":"4"});
+          // }
           
         }
 
