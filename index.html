@@ -450,11 +450,15 @@
 
         function plota_um_usuario(canvas, dados, user, max, delta_y, i) {
 
-          var path = calcula_paths(dados, delta_x_user * i + pad, delta_y);
-          plota_linha(canvas, path["normal_path"]["val_positiva"], 0, 0, {"stroke":"none","fill":cores.mood_positiva});
-          plota_linha(canvas, path["demogorgon_path"]["val_positiva"], 0, 0, {"stroke":"none","fill":cores.mood_positiva});
-          plota_linha(canvas, path["normal_path"]["val_negativa"], 0, 0, {"stroke":"none","fill":cores.mood_negativa});
-          plota_linha(canvas, path["demogorgon_path"]["val_negativa"], 0, 0, {"stroke":"none","fill":cores.mood_negativa});
+          if ($_GET['mood'] === undefined || $_GET['mood'] == "1") {
+
+            var path = calcula_paths(dados, delta_x_user * i + pad, delta_y);
+            plota_linha(canvas, path["normal_path"]["val_positiva"], 0, 0, {"stroke":"none","fill":cores.mood_positiva});
+            plota_linha(canvas, path["demogorgon_path"]["val_positiva"], 0, 0, {"stroke":"none","fill":cores.mood_positiva});
+            plota_linha(canvas, path["normal_path"]["val_negativa"], 0, 0, {"stroke":"none","fill":cores.mood_negativa});
+            plota_linha(canvas, path["demogorgon_path"]["val_negativa"], 0, 0, {"stroke":"none","fill":cores.mood_negativa});
+
+          }
 
           var text = d3
                     .select("body")
