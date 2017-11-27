@@ -316,10 +316,10 @@
         }
 
         function calcula_paths(dados_user, x0, delta_y) {
-          var paths = {
+          var path = {
             "val_positiva": [],
             "val_negativa": []
-          }, demogorgon_paths = {
+          }, demogorgon_path = {
             "val_positiva": [],
             "val_negativa": []
           }
@@ -331,29 +331,87 @@
               demogorgon_x = x0 - delta_x,
               normal_x = x0 + delta_x;
 
-            if (dados_user[i].mood_acumulada >= 0) { 
-              paths["val_negativa"].push({ "x": x0, "y": y });
-              paths["val_positiva"].push({ "x": normal_x, "y": y });
-              demogorgon_paths["val_negativa"].push({ "x": x0, "y": y });
-              demogorgon_paths["val_positiva"].push({ "x": demogorgon_x, "y": y });
-            } else {
-              paths["val_negativa"].push({ "x": normal_x, "y": y });        
-              paths["val_positiva"].push({ "x": x0, "y": y });
-              demogorgon_paths["val_negativa"].push({ "x": demogorgon_x + x_val_scale(dados_user[i].mood_acumulada), "y": y });        
-              demogorgon_paths["val_positiva"].push({ "x": x0, "y": y });
+              // console.log(demogorgon_x+" "+x0+" "+normal_x);
+
+            if (i == 0) { // primeira vez
+              // ponto “0” na timeline
+              path["val_negativa"].push({ "x": x0, "y": y });
+              path["val_positiva"].push({ "x": x0, "y": y });
+              demogorgon_path["val_negativa"].push({ "x": x0, "y": y });
+              demogorgon_path["val_positiva"].push({ "x": x0, "y": y });
             }
+
+            if (dados_user[i].mood_acumulada >= 0) { 
+              path["val_negativa"].push({ "x": x0, "y": y });
+              path["val_positiva"].push({ "x": normal_x, "y": y });
+              demogorgon_path["val_negativa"].push({ "x": x0, "y": y });
+              demogorgon_path["val_positiva"].push({ "x": demogorgon_x, "y": y });
+            } else {
+              path["val_negativa"].push({ "x": normal_x, "y": y });        
+              path["val_positiva"].push({ "x": x0, "y": y });
+              demogorgon_path["val_negativa"].push({ "x": demogorgon_x, "y": y });        
+              demogorgon_path["val_positiva"].push({ "x": x0, "y": y });
+            }
+
+            if (i == dados_user.length-1) { //última vez (finaliza o path)
+              path["val_negativa"].push({ "x": x0, "y": y });
+              path["val_positiva"].push({ "x": x0, "y": y });
+              demogorgon_path["val_negativa"].push({ "x": x0, "y": y });
+              demogorgon_path["val_positiva"].push({ "x": x0, "y": y });
+
+              y = time_scale(dados_user[0].delta_abs) + pad + pad_text + delta_y;
+
+              // ponto “0” na timeline
+              path["val_negativa"].push({ "x": x0, "y": y });
+              path["val_positiva"].push({ "x": x0, "y": y });
+              demogorgon_path["val_negativa"].push({ "x": x0, "y": y });
+              demogorgon_path["val_positiva"].push({ "x": x0, "y": y });
+            }
+
           }
           return {
-            "normal_paths" : paths,
-            "demogorgon_paths" : demogorgon_paths
+            "normal_path" : path,
+            "demogorgon_path" : demogorgon_path
           };
         }
+
+        function plota_linha(canvas, path, offset_x, offset_y, estilo = {
+            "stroke":"black",
+            "stroke-width":1,
+            "fill":"none"
+          }) {
+
+            var lineFunction = d3.line()
+                              .curve(d3.curveMonotoneY)
+                              // .curve(d3.curveMonotoneX)
+                              .x(function(d) { return d.x + offset_x; })
+                              .y(function(d) { return d.y + offset_y; });
+
+            var l = d3.select("body").select("svg")
+                  .append("path")
+                  .attr("d", lineFunction(path));
+            // console.log(path);
+
+            // https://stackoverflow.com/questions/684672/how-do-i-loop-through-or-enumerate-a-javascript-object                        
+            for (var key in estilo) {
+              if (estilo.hasOwnProperty(key)) { 
+                l.attr(key, estilo[key]);
+              }
+            }
+
+            return l;
+          }
 
 
         function plota_um_usuario(canvas, dados, user, max, delta_y, i) {
 
           var path = calcula_paths(dados, delta_x_user * i + pad, delta_y);
-          console.log(path);
+          plota_linha(canvas, path["normal_path"]["val_positiva"], 0, 0, {"stroke":"none","fill":"rgba(0,255,0,0.2)"});
+          plota_linha(canvas, path["demogorgon_path"]["val_positiva"], 0, 0, {"stroke":"none","fill":"rgba(0,255,0,0.2)"});
+          plota_linha(canvas, path["normal_path"]["val_negativa"], 0, 0, {"stroke":"none","fill":"rgba(255,0,0,0.2)"});
+          plota_linha(canvas, path["demogorgon_path"]["val_negativa"], 0, 0, {"stroke":"none","fill":"rgba(255,0,0,0.2)"});
+          // plota_linha(canvas, path["normal_path"]["val_negativa"], 0, 0);
+          // plota_linha(canvas, path["demogorgon_path"]["val_negativa"], 0, 0);
 
           var text = d3
                     .select("body")
