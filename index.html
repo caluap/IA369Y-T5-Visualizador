@@ -448,7 +448,7 @@
           }
 
 
-        function plota_um_usuario(canvas, dados, user, max, delta_y, i) {
+        function plota_um_usuario(canvas, dados, user, max, delta_y, delta_x_user, i) {
 
           if ($_GET['mood'] === undefined || $_GET['mood'] == "1") {
 
@@ -472,7 +472,7 @@
                     .append("p")
                     .text(user)
                     .attr("class","label-user")
-                    .style("left", (i * 100 + pad) + "px");
+                    .style("left", (i * delta_x_user + pad) + "px");
 
 
           for (var fundo = 0; fundo <= 1; fundo++) {
@@ -609,7 +609,7 @@
             var delta_t = min_max[1] - Date.parse(dados[i][0].timestamp);
             var delta_y = y_dia/ms_dia * delta_t;
   
-            plota_um_usuario(canvas, dados[i], users[i], max_geral, delta_y, i)
+            plota_um_usuario(canvas, dados[i], users[i], max_geral, delta_y, delta_x_user, i)
           }
 
 
