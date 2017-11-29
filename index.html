@@ -155,7 +155,7 @@
           }
 
           array_user[i_user]["mood_acumulada"] = 
-              array_user[i_user]["valencia"] // o tweet em si
+              array_user[i_user]["valencia"] * array_user[i_user]["intensidade"] // o tweet em si
             + mood_decaido;
 
           mood_acumulado = array_user[i_user]["mood_acumulada"];
@@ -495,7 +495,7 @@
                   return valence_color_scale(d.valencia);
                 })
                 .attr("opacity",function (d) {
-                  return 0.5 + d.intensidade/2;
+                  return 1;//0.5 + d.intensidade/2;
                 })
                 .attr("cursor","pointer")
                 .attr("stroke","black")
