@@ -65,15 +65,17 @@
 
       var valencia_maxima_acumulada = 0;
 
-      var arquivo_csv = "tweets_classificados.csv";
+      var arquivos_csv = [
+        "tweets_classificados.csv",
+        "tweets_automaticos_emoji2.csv"
+      ];
+      var i_csv = 0;
 
-      if ($_GET['arquivo'] != undefined) {
-        arquivo_csv = $_GET['arquivo'] + ".csv";
+      if ($_GET['arquivo'] != undefined && $_GET['arquivo'] > 0 && $_GET['arquivo'] < arquivos_csv.length) {
+        i_csv = $_GET['arquivo'];
       }
 
-      console.log(arquivo_csv);
-
-      Papa.parse(arquivo_csv, {
+      Papa.parse(arquivos_csv[i_csv], {
       // Papa.parse("tweets_classificados.csv", {
         download: true,
         header: true,
