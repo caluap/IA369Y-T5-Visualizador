@@ -45,11 +45,36 @@
 
     <script>
 
+      var $_GET = {};
+      if(document.location.toString().indexOf('?') !== -1) {
+        var query = document.location
+        .toString()
+        // get the query string
+        .replace(/^.*?\?/, '')
+        // and remove any existing hash string (thanks, @vrijdenker)
+        .replace(/#.*$/, '')
+        .split('&');
+
+        for(var i=0, l=query.length; i<l; i++) {
+          var aux = decodeURIComponent(query[i]).split('=');
+          $_GET[aux[0]] = aux[1];
+        }
+      }
+
       var dados = [], users = [], max_delta_t = [];
 
       var valencia_maxima_acumulada = 0;
 
-      Papa.parse("tweets_classificados.csv", {
+      var arquivo_csv = "tweets_classificados.csv";
+
+      if ($_GET['arquivo'] != undefined) {
+        arquivo_csv = $_GET['arquivo'] + ".csv";
+      }
+
+      console.log(arquivo_csv);
+
+      Papa.parse(arquivo_csv, {
+      // Papa.parse("tweets_classificados.csv", {
         download: true,
         header: true,
         complete: function(results) {
@@ -58,6 +83,9 @@
           
           var lookup = {};
           var items = results.data;
+
+          // console.log(items);
+          // return;
           
           for (var item, i = 0; item = items[i++];) {
             var user = item.id;
@@ -72,6 +100,8 @@
               })));
             }
           }
+
+          
 
           var min_max = acha_min_max_geral(results.data);
 
@@ -245,23 +275,6 @@
 
         return array_periodos;
 
-      }
-
-
-      var $_GET = {};
-      if(document.location.toString().indexOf('?') !== -1) {
-        var query = document.location
-        .toString()
-        // get the query string
-        .replace(/^.*?\?/, '')
-        // and remove any existing hash string (thanks, @vrijdenker)
-        .replace(/#.*$/, '')
-        .split('&');
-
-        for(var i=0, l=query.length; i<l; i++) {
-          var aux = decodeURIComponent(query[i]).split('=');
-          $_GET[aux[0]] = aux[1];
-        }
       }
 
       var cores;
